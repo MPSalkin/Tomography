@@ -1,0 +1,51 @@
+elias@elias-XPS-12:~/Downloads/Fullerton_example$ octave
+GNU Octave, version 3.8.1
+Copyright (C) 2014 John W. Eaton and others.
+This is free software; see the source code for copying conditions.
+There is ABSOLUTELY NO WARRANTY; not even for MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  For details, type 'warranty'.
+
+Octave was configured for "x86_64-pc-linux-gnu".
+
+Additional information about Octave is available at http://www.octave.org.
+
+Please contribute if you find this software useful.
+For more information, visit http://www.octave.org/get-involved.html
+
+Read http://www.octave.org/bugs.html to learn how to submit bug reports.
+For information about changes from previous versions, type 'news'.
+
+octave:1> sl = phantom( 1024 );
+octave:2> raft_image_write( 'sl.mat', sl );
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+elias@elias-XPS-12:~/Downloads/Fullerton_example$ python
+Python 2.7.6 (default, Oct 26 2016, 20:30:19) 
+[GCC 4.8.4] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import pyraft as pr
+
+>>> import matplotlib.pyplot as pp
+
+>>> sl = pr.image_read( 'sl.mat' )
+
+>>> pp.imshow( sl, interpolation = 'nearest', cmap = 'gray_r', extent = ( sl.top_left[ 0 ], sl.bottom_right[ 0 ], sl.bottom_right[ 1 ], sl.top_left[ 1 ] ) )
+<matplotlib.image.AxesImage object at 0x7fbf137b18d0>
+
+>>> pp.show()
+
+>>> import fourier_slice as fs
+
+>>> import numpy as np
+
+>>> sino = pr.image( np.zeros( ( 1024, 1024 ) ), top_left = ( 0, 1 ), bottom_right = ( 3.1415926535897932384, -1 ) )
+
+>>> fast_radon, fast_transp = fs.make_fourier_slice_radon_transp( sino )
+
+>>> sino = fast_radon( sl )
+
+>>> pp.imshow( sino, interpolation = 'nearest', cmap = 'gray_r', extent = ( sino.top_left[ 0 ], sino.bottom_right[ 0 ], sino.bottom_right[ 1 ], sino.top_left[ 1 ] ) )
+<matplotlib.image.AxesImage object at 0x7fbf07afde10>
+
+>>> pp.show()
