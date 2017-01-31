@@ -4,6 +4,7 @@ import matplotlib.pyplot as pp
 import fourier_slice as fs
 import numpy as np
 import math
+import time 
 
 def importPhoto():
 	sl = pr.image_read( 'sl.mat' ) 
@@ -41,7 +42,7 @@ def importSino():
 
 def grad(x):
 	tmp = fast_radon(x) - b
-	return fast_transp(tmp)
+	return (tmp)
 
 def ImportData(sino_or_image):
 	if sino_or_image == 0:
@@ -64,24 +65,43 @@ t = 1
 c = 0
 x = y 
 
-while np.linalg.norm(x - x0, 'fro')/np.linalg.norm(x0, 'fro') > tau:
-	if c > 12:
-		break
+# while np.linalg.norm(x - x0, 'fro')/np.linalg.norm(x0, 'fro') > tau:
+# 	if c > 12:
+# 		break
+itr = 3
+T = np.zeros((1,itr))
+obj = np.zeros((1,itr))
+start_time = time.time()
+for i in range(0,itr):
 	x0 = x
 	t0 = t
 
 	c += 1
 	print(c)
-	
-	x = y - gamma*grad(x0)
+	x = y - gamma*fast_transp(grad(x0))
 	x[x<0] = 0
 	t = (1 + np.sqrt(1 + 4 * t0 ** 2)) / 2
 	y = x + (t0 - 1) / t * (x - x0)
 
+	# Record time of each iteration
+	T[0,i] = time.time() - start_time
+
+	# Store the objective function for each iteration.
+	obj[0,i] = np.linalg.norm(grad(x0))**2
 
 
+print('Elapsed Time: ', T)
+print('ObjFxn', obj)
 
-print(x)
+pp.figure(1)
+pp.plot(T,obj)
+pp.xlabel('Time')
+pp.ylabel('Objective Function')
+# pp.yscale('log')
+pp.show()
+
+#print(x)
+pp.figure(2)
 image = pr.image( x , top_left =  (-1,1), bottom_right = (1, -1) ) 
 pp.imshow( image, cmap = 'gray_r', interpolation = 'nearest', 
 		extent = ( image.top_left[ 0 ], image.bottom_right[ 0 ], image.bottom_right[ 1 ], image.top_left[ 1 ] ))
