@@ -9,8 +9,8 @@ import time
 def importPhoto():
 	sl = pr.image_read( 'sl.mat' ) 
 
-	pp.imshow( sl, cmap = 'gray_r', interpolation = 'nearest', 
-		extent = ( sl.top_left[ 0 ], sl.bottom_right[ 0 ], sl.bottom_right[ 1 ], sl.top_left[ 1 ] ))
+	#pp.imshow( sl, cmap = 'gray_r', interpolation = 'nearest', 
+#		extent = ( sl.top_left[ 0 ], sl.bottom_right[ 0 ], sl.bottom_right[ 1 ], sl.top_left[ 1 ] ))
 	#pp.show()
 
 	sino = pr.image( np.zeros( (1024,1024) ) , top_left =  (0,1), bottom_right = (math.pi, -1) ) 
@@ -19,8 +19,8 @@ def importPhoto():
 
 	sino = fast_radon( sl ) 
 
-	pp.imshow( sino, cmap = 'gray_r', interpolation = 'nearest', 
-		extent = ( sino.top_left[ 0 ], sino.bottom_right[ 0 ], sino.bottom_right[ 1 ], sino.top_left[ 1 ] ))
+	#pp.imshow( sino, cmap = 'gray_r', interpolation = 'nearest', 
+		#extent = ( sino.top_left[ 0 ], sino.bottom_right[ 0 ], sino.bottom_right[ 1 ], sino.top_left[ 1 ] ))
 	#pp.show()
 	
 	return sino, fast_radon, fast_transp
@@ -34,8 +34,8 @@ def importSino():
 
 	fast_radon, fast_transp = fs.make_fourier_slice_radon_transp( sino )
 
-	pp.imshow( sino, cmap = 'gray_r', interpolation = 'nearest', 
-		extent = ( sino.top_left[ 0 ], sino.bottom_right[ 0 ], sino.bottom_right[ 1 ], sino.top_left[ 1 ] ))
+	#pp.imshow( sino, cmap = 'gray_r', interpolation = 'nearest', 
+		#extent = ( sino.top_left[ 0 ], sino.bottom_right[ 0 ], sino.bottom_right[ 1 ], sino.top_left[ 1 ] ))
 	#pp.show()
 	
 	return sino, fast_radon, fast_transp
@@ -68,9 +68,9 @@ x = y
 # while np.linalg.norm(x - x0, 'fro')/np.linalg.norm(x0, 'fro') > tau:
 # 	if c > 12:
 # 		break
-itr = 3
-T = np.zeros((1,itr))
-obj = np.zeros((1,itr))
+itr = 100
+T = np.zeros((itr,1))
+obj = np.zeros((itr,1))
 start_time = time.time()
 for i in range(0,itr):
 	x0 = x
@@ -84,26 +84,27 @@ for i in range(0,itr):
 	y = x + (t0 - 1) / t * (x - x0)
 
 	# Record time of each iteration
-	T[0,i] = time.time() - start_time
+	T[i,0] = time.time() - start_time
 
 	# Store the objective function for each iteration.
-	obj[0,i] = np.linalg.norm(grad(x0))**2
+	obj[i,0] = np.linalg.norm(grad(x0))**2
 
 
-print('Elapsed Time: ', T)
-print('ObjFxn', obj)
+print(T)
+print(obj)
+obj2 = np.zeros((itr-1,1))
+obj2 = obj[0,0] - obj
+#obj = np.log10(obj)
+#print(x)
+#pp.figure(1)
+#image = pr.image( x , top_left =  (-1,1), bottom_right = (1, -1) ) 
+#pp.imshow( image, cmap = 'gray_r', interpolation = 'nearest', 
+	#	extent = ( image.top_left[ 0 ], image.bottom_right[ 0 ]#, image.bottom_right[ 1 ], image.top_left[ 1 ] ))
+#pp.show()
 
 pp.figure(1)
-pp.plot(T,obj)
-pp.xlabel('Time')
-pp.ylabel('Objective Function')
-# pp.yscale('log')
+pp.plot(obj)
+pp.ylabel('objective function decrease')
 pp.show()
-
-#print(x)
-pp.figure(2)
-image = pr.image( x , top_left =  (-1,1), bottom_right = (1, -1) ) 
-pp.imshow( image, cmap = 'gray_r', interpolation = 'nearest', 
-		extent = ( image.top_left[ 0 ], image.bottom_right[ 0 ], image.bottom_right[ 1 ], image.top_left[ 1 ] ))
-pp.show()
-
+#pp.xlabel('Time')
+#pp.ylabel('Objective Function')
