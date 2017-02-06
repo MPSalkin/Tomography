@@ -5,6 +5,9 @@ import fourier_slice as fs
 import numpy as np
 import math
 import time 
+from skimage import data, img_as_float
+from skimage.measure import compare_ssim as ssim
+
 
 def importPhoto():
 	sl = pr.image_read( 'sl.mat' ) 
@@ -23,7 +26,7 @@ def importPhoto():
 		#extent = ( sino.top_left[ 0 ], sino.bottom_right[ 0 ], sino.bottom_right[ 1 ], sino.top_left[ 1 ] ))
 	#pp.show()
 	
-	return sino, fast_radon, fast_transp
+	return sl, sino, fast_radon, fast_transp
 
 def importSino():
 	sino = pr.image_read( 'egg_slice_1097.mat' ) 
@@ -46,15 +49,21 @@ def grad(x):
 
 def ImportData(sino_or_image):
 	if sino_or_image == 0:
-		b, fast_radon, fast_transp = importPhoto()
+		A,b, fast_radon, fast_transp = importPhoto()
 	elif sino_or_image == 1:
 		b, fast_radon, fast_transp = importSino()
-
-	return b, fast_radon, fast_transp
+		A = np.zeros((np.min(b.shape),np.min(b.shape)))
+  
+	return A,b, fast_radon, fast_transp
 
 #def FISTA(sino_or_image)
-b, fast_radon, fast_transp = ImportData(1)
-
+RealData = 0
+if RealData == 0:
+   A, b, fast_radon, fast_transp = ImportData(0)
+elif RealData == 1:
+   A, b, fast_radon, fast_transp = ImportData(1)
+#img = img_as_float(A)
+BEST = np.zeros(A.shape)
 m,n = b.shape
 
 gamma = 0.45
@@ -68,9 +77,10 @@ x = y
 # while np.linalg.norm(x - x0, 'fro')/np.linalg.norm(x0, 'fro') > tau:
 # 	if c > 12:
 # 		break
-itr = 100
+itr = 50
 T = np.zeros((itr,1))
 obj = np.zeros((itr,1))
+SSIM = np.zeros((itr,1))
 start_time = time.time()
 for i in range(0,itr):
 	x0 = x
@@ -88,6 +98,9 @@ for i in range(0,itr):
 
 	# Store the objective function for each iteration.
 	obj[i,0] = np.linalg.norm(grad(x0))**2
+	# Store the image and SSIM for each iteration.
+	SSIM[i,0] = ssim(A,x)
+        
 
 
 print(T)
@@ -103,8 +116,21 @@ obj2 = obj[0,0] - obj
 #pp.show()
 
 pp.figure(1)
-pp.plot(obj)
+pp.plot(T,obj)
+pp.ylabel('objective function')
+pp.xlabel('Time (in seconds)')
+pp.show()
+
+pp.figure(2)
+pp.plot(T,obj2)
 pp.ylabel('objective function decrease')
+pp.xlabel('Time (in seconds)')
+pp.show()
+
+pp.figure(3)
+pp.plot(T,SSIM)
+pp.ylabel('SSIM')
+pp.xlabel('Time (in seconds)')
 pp.show()
 #pp.xlabel('Time')
 #pp.ylabel('Objective Function')
