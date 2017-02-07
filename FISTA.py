@@ -79,27 +79,34 @@ x = y
 # 		break
 itr = 50
 T = np.zeros((itr,1))
+print(T)
 obj = np.zeros((itr,1))
 SSIM = np.zeros((itr,1))
 start_time = time.time()
 for i in range(0,itr):
-	x0 = x
-	t0 = t
-
-	c += 1
-	print(c)
-	x = y - gamma*fast_transp(grad(x0))
-	x[x<0] = 0
-	t = (1 + np.sqrt(1 + 4 * t0 ** 2)) / 2
-	y = x + (t0 - 1) / t * (x - x0)
-
-	# Record time of each iteration
-	T[i,0] = time.time() - start_time
-
-	# Store the objective function for each iteration.
-	obj[i,0] = np.linalg.norm(grad(x0))**2
-	# Store the image and SSIM for each iteration.
-	SSIM[i,0] = ssim(A,x)
+    #Begin clock at each iteration
+    iter_begin = time.time()
+    x0 = x
+    t0 = t
+    c += 1
+    print(c)
+    x = y - gamma*fast_transp(grad(x0))
+    x[x<0] = 0
+    t = (1 + np.sqrt(1 + 4 * t0 ** 2)) / 2
+    y = x + (t0 - 1) / t * (x - x0)
+   
+    # Record time of each iteration
+    current_time = time.time()
+    if i==0 :
+        T[i,0] = current_time - start_time
+    else:
+        T[i,0] = (current_time - iter_begin) + T[i-1,0]
+          
+    # Store the objective function for each iteration.
+    obj[i,0] = np.linalg.norm(grad(x0))**2
+    
+    # Store the image and SSIM for each iteration.
+    SSIM[i,0] = ssim(A,x)
         
 
 
@@ -128,9 +135,9 @@ pp.xlabel('Time (in seconds)')
 pp.show()
 
 pp.figure(3)
-pp.plot(T,SSIM)
+pp.plot(SSIM)
 pp.ylabel('SSIM')
-pp.xlabel('Time (in seconds)')
+pp.xlabel('Iteration')
 pp.show()
 #pp.xlabel('Time')
 #pp.ylabel('Objective Function')
