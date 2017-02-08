@@ -5,10 +5,11 @@ import fourier_slice as fs
 import numpy as np
 import math
 import time 
+import savedata as sd
 from skimage import data, img_as_float
 from skimage.measure import compare_ssim as ssim
 
-
+# Function used to import photo data and radon function for data
 def importPhoto():
 	sl = pr.image_read( 'sl.mat' ) 
 
@@ -28,6 +29,7 @@ def importPhoto():
 	
 	return sl, sino, fast_radon, fast_transp
 
+# Function used to import sinogram data and radon function for data
 def importSino():
 	sino = pr.image_read( 'egg_slice_1097.mat' ) 
 
@@ -43,10 +45,12 @@ def importSino():
 	
 	return sino, fast_radon, fast_transp
 
+# Gradient function
 def grad(x):
 	tmp = fast_radon(x) - b
 	return (tmp)
 
+# Function to select type of data to import
 def ImportData(sino_or_image):
 	if sino_or_image == 0:
 		A,b, fast_radon, fast_transp = importPhoto()
@@ -56,7 +60,6 @@ def ImportData(sino_or_image):
   
 	return A,b, fast_radon, fast_transp
 
-#def FISTA(sino_or_image)
 RealData = 0
 if RealData == 0:
    A, b, fast_radon, fast_transp = ImportData(0)
@@ -66,35 +69,38 @@ elif RealData == 1:
 BEST = np.zeros(A.shape)
 m,n = b.shape
 
+# Constants and initialization
 gamma = 0.45
 tau = pow(10,-4)
 y = np.ones((m,m)) * ( np.sum(b) / np.sum( fast_radon( np.ones((m,m)) ) ) )
 x0 = np.ones((m,m))
 t = 1
-c = 0
+count = 0
 x = y 
 
-# while np.linalg.norm(x - x0, 'fro')/np.linalg.norm(x0, 'fro') > tau:
-# 	if c > 12:
-# 		break
-itr = 50
+itr = 20
 T = np.zeros((itr,1))
-print(T)
 obj = np.zeros((itr,1))
 SSIM = np.zeros((itr,1))
 start_time = time.time()
+
+# Main loop for FISTA image reconstruction algorithm
 for i in range(0,itr):
+	# Print iteration number
+    count += 1
+    print 'Iteration:',count
+
     #Begin clock at each iteration
     iter_begin = time.time()
+
+    # FISTA meat and potatos
     x0 = x
     t0 = t
-    c += 1
-    print(c)
     x = y - gamma*fast_transp(grad(x0))
     x[x<0] = 0
     t = (1 + np.sqrt(1 + 4 * t0 ** 2)) / 2
     y = x + (t0 - 1) / t * (x - x0)
-   
+
     # Record time of each iteration
     current_time = time.time()
     if i==0 :
@@ -108,32 +114,33 @@ for i in range(0,itr):
     # Store the image and SSIM for each iteration.
     SSIM[i,0] = ssim(A,x)
         
+# Save objective function and time values
+sd.saveme(obj,T,itr,'FISTA')
 
-
-print(T)
-print(obj)
+# Print Recovered Image, Time, and Objective Function data
+print 'ImageData', x
+print 'Time:', T
+print 'ObjectiveFunction', obj
 obj2 = np.zeros((itr-1,1))
 obj2 = obj[0,0] - obj
 #obj = np.log10(obj)
 #print(x)
-#pp.figure(1)
-#image = pr.image( x , top_left =  (-1,1), bottom_right = (1, -1) ) 
-#pp.imshow( image, cmap = 'gray_r', interpolation = 'nearest', 
-	#	extent = ( image.top_left[ 0 ], image.bottom_right[ 0 ]#, image.bottom_right[ 1 ], image.top_left[ 1 ] ))
-#pp.show()
 
+# Plot the objective function vs time
 pp.figure(1)
 pp.plot(T,obj)
 pp.ylabel('objective function')
 pp.xlabel('Time (in seconds)')
 pp.show()
 
+# Plot the objective function decrease vs time
 pp.figure(2)
 pp.plot(T,obj2)
 pp.ylabel('objective function decrease')
 pp.xlabel('Time (in seconds)')
 pp.show()
 
+# Plot the SSIM 
 pp.figure(3)
 pp.plot(SSIM)
 pp.ylabel('SSIM')
@@ -141,3 +148,13 @@ pp.xlabel('Iteration')
 pp.show()
 #pp.xlabel('Time')
 #pp.ylabel('Objective Function')
+
+# Display reconstructed image
+# pp.figure(4)
+# image = pr.image( x , top_left =  (-1,1), bottom_right = (1, -1) ) 
+# pp.imshow( image, cmap = 'gray_r', interpolation = 'nearest', 
+# 		extent = ( image.top_left[ 0 ], image.bottom_right[ 0 ]#, image.bottom_right[ 1 ], image.top_left[ 1 ] ))
+# pp.show()
+
+
+
