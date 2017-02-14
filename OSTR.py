@@ -5,8 +5,10 @@ import fourier_slice as fs
 import numpy as np
 import math
 import time
+import savedata as sd
 from skimage.measure import compare_ssim as ssim
 
+# Function used to import data and radon function for data
 def importOS():
     counts = pr.image_read( 'counts.mat', dtype=np.float32 ) 
     dark = pr.image_read( 'dark.mat', dtype=np.float32  ) 
@@ -28,14 +30,15 @@ def importOS():
 def grad(l,counts,dark,flat,idx):
     tmp = (flat*counts) / ( flat + dark * np.exp(l) ) - flat * np.exp(-l)
     return tmp
-    
+
+# Objective function
 def hreg(l,counts,dark,flat,idx):
-    luis = flat*np.exp(-l) + dark
-    luis[luis<0]=0
-    luis=np.log(luis)
-    luis[luis==1]=0
-    tmp2 = flat*np.exp(-l) + dark - counts*luis
-    return tmp2
+    tmp = flat*np.exp(-l) + dark
+    tmp[tmp<0]=0
+    tmp=np.log(tmp)
+    tmp[tmp==1]=0
+    tmp = flat*np.exp(-l) + dark - counts*tmp
+    return tmp
 # c(l) function
 # def c_l(l,counts,dark,flat):
 #     y_bar = flat * np.exp(-l) + dark	
@@ -55,6 +58,7 @@ if __name__ == "__main__":
     
     # Get dimensions of sinogram
     row,col = tmp_counts.shape
+
     # initialize splits and image
     M = 5 # Number of subsets
     N = 20 # Number of iterations
@@ -69,8 +73,7 @@ if __name__ == "__main__":
     dark = []
     flat = []
     
-    # Create fast radon/transp functions for subsets
-    
+    # Create fast radon/transp functions and subdivide data for subsets
     for i in range(0,M): 
         len_col_m = len(col_M[i])
         sino = pr.image( np.zeros( (row, len_col_m) ) , 
@@ -82,36 +85,48 @@ if __name__ == "__main__":
         dark.append(tmp_dark[:,col_M[i]])
         flat.append(tmp_flat[:,col_M[i]])
     
-    ## Main loop for reconstruction algorithm
+    # Preallocate parameters
     gamma = ffast_radon( np.ones((row,row)) )
     d_star = ffast_transp( gamma * (tmp_counts - tmp_dark)**2 / tmp_counts )
-    itr = 0
     # dj = fast_radon(gamma*c(l))
     T = np.zeros((N,1))
     obj = np.zeros((N,1))
     SSIM = np.zeros((N,1))
     start_time = time.time()
     subseth = np.zeros((M,1))
+    itr = 0
+
+    # Main loop for OSTR image reconstruction algorithm
     for n in range(0,N):
         iter_begin = time.time()
+
+        # Nested loop to iterate over M subsets
         for mm in range(0,M):
             l = fast_radon[mm](x)
             h_dot = grad(l,counts[mm],dark[mm],flat[mm],mm)
             L_dot = fast_transp[mm](h_dot)
             x = x - M*L_dot/d_star
             subseth[mm] = np.sum(hreg(l,counts[mm],dark[mm],flat[mm],mm))
+
         #Store time immediately after iteration
         current_time = time.time()
+
         #compute elapsed time
         if n==0 :
             T[n,0] = current_time - start_time
         else:
             T[n,0] = (current_time - iter_begin) + T[n-1,0]
+
         #Compute and store objective function
         obj[n,0] = np.sum(subseth)
+
         #Keep track of itreations
         itr += 1
-        print(itr)
+        print 'Iteration:',itr
+
+    # Save objective function and time values
+    sd.saveme(obj,T,N,'OSTR')
+
     #Display Time and Objective function vectors.
 #    print(T)
 #    print(obj)
@@ -120,25 +135,32 @@ if __name__ == "__main__":
     #Compute objective function decrease
     obj2 = np.zeros((itr-1,1))
     obj2 = obj[0,0] - obj
-    ## Print Recovered Image
-    print(x)
+
+    # Print Recovered Image, Time, and Objective Function data
+    print 'ImageData', x
+    print 'Time:', T
+    print 'ObjectiveFunction', obj
     # sino_x = ffast_radon(x)
     # image_sino = pr.image( sino_x , top_left =  (0,1), bottom_right = (math.pi, -1) ) 
     # pp.imshow( image_sino, cmap = 'gray_r', interpolation = 'nearest', 
     # 		extent = ( image_sino.top_left[ 0 ], image_sino.bottom_right[ 0 ], image_sino.bottom_right[ 1 ], image_sino.top_left[ 1 ] ))
     # pp.show()
+
+    # Plot the objective function vs time
     pp.figure(1)
     pp.plot(T,obj)
     pp.ylabel('objective function')
     pp.xlabel('Time (in seconds)')
     pp.show()
     
+    # Plot the objective function decrease vs time
     pp.figure(2)
     pp.plot(T,obj2)
     pp.ylabel('objective function decrease')
     pp.xlabel('Time (in seconds)')
     pp.show()
     
+    # Display reconstructed image
     pp.figure(4)
     image = pr.image( x , top_left =  (-1,1), bottom_right = (1, -1) ) 
     pp.imshow( image, cmap = 'gray_r', interpolation = 'nearest', 
