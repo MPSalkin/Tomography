@@ -10,10 +10,13 @@ from skimage.measure import compare_ssim as ssim
 
 # Function used to import data and radon function for data
 def importOS():
-    counts = pr.image_read( 'counts.mat', dtype=np.float32 ) 
-    dark = pr.image_read( 'dark.mat', dtype=np.float32  ) 
-    flat = pr.image_read( 'flat.mat', dtype=np.float32  ) 
-
+    counts = pr.image_read( 'slcount.mat', dtype=np.float32 ) 
+    print 'counts',counts.shape
+    dark = pr.image_read( 'sldark.mat', dtype=np.float32  ) 
+    print 'dark', dark.shape
+    flat = pr.image_read( 'slflat.mat', dtype=np.float32  ) 
+    print 'flat', flat.shape
+    # flat = np.zeros(counts.shape)
     #pp.imshow( sino, cmap = 'gray_r', interpolation = 'nearest', 
 		#extent = ( sl.top_left[ 0 ], sl.bottom_right[ 0 ], sl.bottom_right[ 1 ], sl.top_left[ 1 ] ))
     #pp.show()
@@ -27,12 +30,12 @@ def importOS():
     return counts, dark, flat, fast_radon, fast_transp
 
 # Gradient function (y = counts; b = flat; r = dark)
-def grad(l,counts,dark,flat,idx):
+def grad(l,counts,dark,flat):
     tmp = (flat*counts) / ( flat + dark * np.exp(l) ) - flat * np.exp(-l)
     return tmp
 
 # Objective function
-def hreg(l,counts,dark,flat,idx):
+def hreg(l,counts,dark,flat):
     tmp = flat*np.exp(-l) + dark
     tmp[tmp<0]=0
     tmp=np.log(tmp)
@@ -61,7 +64,7 @@ if __name__ == "__main__":
 
     # initialize splits and image
     M = 5 # Number of subsets
-    N = 20 # Number of iterations
+    N = 10 # Number of iterations
     x = np.zeros((row,row)) * ( np.sum(tmp_counts) / np.sum( ffast_radon( np.ones((row,row)) ) ) )
     
     # Create M subsets of sinogram
@@ -103,10 +106,10 @@ if __name__ == "__main__":
         # Nested loop to iterate over M subsets
         for mm in range(0,M):
             l = fast_radon[mm](x)
-            h_dot = grad(l,counts[mm],dark[mm],flat[mm],mm)
+            h_dot = grad(l,counts[mm],dark[mm],flat[mm])
             L_dot = fast_transp[mm](h_dot)
             x = x - M*L_dot/d_star
-            subseth[mm] = np.sum(hreg(l,counts[mm],dark[mm],flat[mm],mm))
+            subseth[mm] = np.sum(hreg(l,counts[mm],dark[mm],flat[mm]))
 
         #Store time immediately after iteration
         current_time = time.time()

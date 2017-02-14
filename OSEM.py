@@ -81,7 +81,7 @@ counts = b
 m,n = b.shape
 print m,n
 
-gamma = 0.5
+gamma = 10**(-4)
 tau = pow(10,-20)
 y = np.zeros((m,m)) * ( np.sum(b) / np.sum( fast_radon( np.ones((m,m)) ) ) )
 x0 = np.ones((m,m))

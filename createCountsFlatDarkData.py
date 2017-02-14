@@ -12,7 +12,9 @@ print 'sl',sl.shape
 sino = pr.image( np.zeros( (1024,1024) ) , top_left =  (0,1), bottom_right = (math.pi, -1) ) 
 fast_radon, fast_transp = fs.make_fourier_slice_radon_transp( sino )
 sino = fast_radon( sl )
-print 'sino',sino.shape
+
+print 'sino size',sino.shape
+
 # Create flat image using Poisson distribution
 lamb = 1 # mean of distribution
 flat_im = pos.rvs(lamb, size=(sl.shape))
@@ -22,9 +24,9 @@ flat = fast_radon(flat_im)
 counts = flat*np.exp(-sino)
 dark = 0*counts
 
-print 'counts', counts.shape
-print 'flat',flat.shape
-print 'dark',dark.shape
+print 'counts size', counts.shape
+print 'flat size',flat.shape
+print 'dark size',dark.shape
 
 # pp.imshow( flat, cmap = 'gray_r', interpolation = 'nearest', 
 # 	extent = ( flat.top_left[ 0 ], flat.bottom_right[ 0 ], flat.bottom_right[ 1 ], flat.top_left[ 1 ] ) )
