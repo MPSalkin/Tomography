@@ -36,9 +36,9 @@ def importSino():
 	# sino = pr.image_read( 'slcount.mat', dtype=np.float32 ) 
 	# flat = pr.image_read( 'slflat.mat', dtype=np.float32  ) 
 	# dark = pr.image_read( 'sldark.mat', dtype=np.float32  )
-	counts = pr.image_read( 'counts.mat', dtype=np.float32 ) 
-	flat = pr.image_read( 'flat.mat', dtype=np.float32  ) 
-	dark = pr.image_read( 'dark.mat', dtype=np.float32  ) 
+	counts = pr.image_read( 'nslcounts.mat', dtype=np.float32 ) 
+	flat = pr.image_read( 'nslflat.mat', dtype=np.float32  ) 
+	dark = pr.image_read( 'nsldark.mat', dtype=np.float32  ) 
 	#pp.imshow( sino, cmap = 'gray_r', interpolation = 'nearest', 
 		#extent = ( sl.top_left[ 0 ], sl.bottom_right[ 0 ], sl.bottom_right[ 1 ], sl.top_left[ 1 ] ))
 	#pp.show()
@@ -57,16 +57,17 @@ def importSino():
 # 	return (tmp)
 # Gradient function (y = counts; b = flat; r = dark)
 def grad(l,counts,dark,flat):
-    tmp = (flat*counts) / ( flat + dark * np.exp(l) ) - flat * np.exp(-l)
+    const = flat * np.exp(-l)
+    tmp = ((counts)/(dark+const)-1)*const 
     return tmp
 
 # Objective function
 def hreg(l,counts,dark,flat):
-    tmp = flat*np.exp(-l) + dark
+    tmp1 = tmp = flat*np.exp(-l) + dark
     tmp[tmp<0]=0
     tmp=np.log(tmp)
     tmp[tmp==1]=0
-    tmp = flat*np.exp(-l) + dark - counts*tmp
+    tmp = tmp1 - counts*tmp
     return tmp
 
 # Function to select type of data to import
@@ -93,7 +94,7 @@ print m,n
 print 'Image', A.shape
 
 # Constants and initialization
-gamma = 2.195*10**(-4)
+gamma = 1.1*10**(-4)
 tau = pow(10,-4)
 y = np.ones((m,m)) * ( np.sum(b) / np.sum( fast_radon( np.ones((m,m)) ) ) )
 x0 = np.ones((m,m))
@@ -101,7 +102,7 @@ t = 1
 count = 0
 x = y 
 
-itr = 20
+itr = 5
 T = np.zeros((itr,1))
 obj = np.zeros((itr,1))
 SSIM = np.zeros((itr,1))
@@ -117,7 +118,7 @@ for i in range(0,itr):
     iter_begin = time.time()
 
     # FISTA meat and potatos
-    x0 = x
+    x0 = x   
     t0 = t
     x = y - gamma*fast_transp(grad(fast_radon(x0),counts,dark,flat))
     x[x<0] = 0
@@ -126,6 +127,7 @@ for i in range(0,itr):
 
     # Record time of each iteration
     current_time = time.time()
+    SSIM[i,0] = ssim(A,x)
     if i==0 :
         T[i,0] = current_time - start_time
     else:
@@ -177,4 +179,6 @@ pp.figure(4)
 image = pr.image( x , top_left =  (-1,1), bottom_right = (1, -1) ) 
 FISTA_image = pp.imshow( image, cmap = 'gray', interpolation = 'nearest', 
 		extent = ( image.top_left[ 0 ], image.bottom_right[ 0 ], image.bottom_right[ 1 ], image.top_left[ 1 ] ))
+pp.title('FISTA (ML) - 20 Iterations (Moderate Noise)')
+pp.savefig('FISTA_noisy_reconstruct.png')
 pp.show(FISTA_image)
