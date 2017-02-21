@@ -36,9 +36,9 @@ def importSino():
 	# sino = pr.image_read( 'slcount.mat', dtype=np.float32 ) 
 	# flat = pr.image_read( 'slflat.mat', dtype=np.float32  ) 
 	# dark = pr.image_read( 'sldark.mat', dtype=np.float32  )
-	counts = pr.image_read( 'nslcounts.mat', dtype=np.float32 ) 
-	flat = pr.image_read( 'nslflat.mat', dtype=np.float32  ) 
-	dark = pr.image_read( 'nsldark.mat', dtype=np.float32  ) 
+	counts = pr.image_read( 'TomoData/noisyphantom/nslcounts.mat', dtype=np.float32 ) 
+	flat = pr.image_read( 'TomoData/noisyphantom/nslflat.mat', dtype=np.float32  ) 
+	dark = pr.image_read( 'TomoData/noisyphantom/nsldark.mat', dtype=np.float32  ) 
 	#pp.imshow( sino, cmap = 'gray_r', interpolation = 'nearest', 
 		#extent = ( sl.top_left[ 0 ], sl.bottom_right[ 0 ], sl.bottom_right[ 1 ], sl.top_left[ 1 ] ))
 	#pp.show()
@@ -102,7 +102,7 @@ t = 1
 count = 0
 x = y 
 
-itr = 5
+itr = 20
 T = np.zeros((itr,1))
 obj = np.zeros((itr,1))
 SSIM = np.zeros((itr,1))
@@ -140,7 +140,7 @@ for i in range(0,itr):
     #SSIM[i,0] = ssim(A,x)
         
 # Save objective function and time values
-sd.saveme(obj,T,itr,'FISTA')
+sd.saveme(obj,T,SSIM,itr,0,'FISTA')
 
 # Print Recovered Image, Time, and Objective Function data
 print 'ImageData', x
@@ -180,5 +180,5 @@ image = pr.image( x , top_left =  (-1,1), bottom_right = (1, -1) )
 FISTA_image = pp.imshow( image, cmap = 'gray', interpolation = 'nearest', 
 		extent = ( image.top_left[ 0 ], image.bottom_right[ 0 ], image.bottom_right[ 1 ], image.top_left[ 1 ] ))
 pp.title('FISTA (ML) - 20 Iterations (Moderate Noise)')
-pp.savefig('FISTA_noisy_reconstruct.png')
+pp.savefig('Visuals/Images/FISTA_noisy_reconstruct_' + str(itr) + '_ITR' '.png')
 pp.show(FISTA_image)

@@ -11,11 +11,11 @@ from skimage.measure import compare_ssim as ssim
 # Function used to import data and radon function for data
 def importOS():
     IMAGE = pr.image_read( 'sl.mat')
-    counts = pr.image_read( 'nslcounts.mat', dtype=np.float32 ) 
+    counts = pr.image_read( 'TomoData/noisyphantom/nslcounts.mat', dtype=np.float32 ) 
     print 'counts',counts.shape
-    dark = pr.image_read( 'nsldark.mat', dtype=np.float32  ) 
+    dark = pr.image_read( 'TomoData/noisyphantom/nsldark.mat', dtype=np.float32  ) 
     print 'dark', dark.shape
-    flat = pr.image_read( 'nslflat.mat', dtype=np.float32  ) 
+    flat = pr.image_read( 'TomoData/noisyphantom/nslflat.mat', dtype=np.float32  ) 
     print 'flat', flat.shape
     # flat = np.zeros(counts.shape)
     #pp.imshow( sino, cmap = 'gray_r', interpolation = 'nearest', 
@@ -65,8 +65,8 @@ if __name__ == "__main__":
     row,col = tmp_counts.shape
 
     # initialize splits and image
-    M = 32 # Number of subsets
-    N = 5 # Number of iterations
+    M = 10 # Number of subsets
+    N = 20 # Number of iterations
     x = np.zeros((row,row)) * ( np.sum(tmp_counts) / np.sum( ffast_radon( np.ones((row,row)) ) ) )
     
     # Create M subsets of sinogram
@@ -131,7 +131,7 @@ if __name__ == "__main__":
             
 
     # Save objective function and time values
-    sd.saveme(obj,T,N,'OSTR')
+    sd.saveme(obj,T,SSIM,N,M,'OSTR')
 
     #Display Time and Objective function vectors.
 #    print(T)
@@ -171,7 +171,7 @@ if __name__ == "__main__":
     image = pr.image( x , top_left =  (-1,1), bottom_right = (1, -1) ) 
     pp.imshow( image, cmap = 'gray', interpolation = 'nearest', 
               extent = ( image.top_left[ 0 ], image.bottom_right[ 0 ], image.bottom_right[ 1 ], image.top_left[ 1 ] ))
-    pp.title('OSTR 5 Subsets - 20 Iterations (Moderate Noise)')
-    pp.savefig('OSTR_noisy_reconstruct.png')
+    pp.title('OSTR ' + str(M) + ' Subsets - ' + str(N) + 'Iterations (Moderate Noise)')
+    pp.savefig('Visuals/Images/OSTR_noisy_reconstruct_'+ str(N) + '_Iter_' + str(M) + '_Subsets.png')
     pp.show()
 

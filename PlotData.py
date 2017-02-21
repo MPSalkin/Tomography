@@ -23,7 +23,7 @@ for key in Data:
 	if key[0] == 'T':
 		time = Data[key]
 		sub = key[4:]
-		if key[-1] == 0:
+		if key == 'Time0':
 			subset = 'FISTA'
 		else:
 			subset = 'OSTR ' + key[4:] + ' Subsets'		
@@ -34,7 +34,7 @@ for key in Data:
 		pp.ylabel('objective function')
 		pp.xlabel('Time (seconds)')
 pp.legend(loc = 'best')
-pp.savefig('Figures/Objective_Function_vs_Time_' + Iterations + '_Iterations.png')
+pp.savefig('Visuals/Figures/Objective_Function_vs_Time_' + Iterations + '_Iterations.png')
 pp.show()
 
 # Plot Objective Function Decrease
@@ -42,7 +42,7 @@ for key in Data:
 	if key[0] == 'T':
 		time = Data[key]
 		sub = key[4:]
-		if key[-1] == 0:
+		if key == 'Time0':
 			subset = 'FISTA'
 		else:
 			subset = 'OSTR ' + key[4:] + ' Subsets'
@@ -54,12 +54,12 @@ for key in Data:
 		pp.ylabel('objective function decrease')
 		pp.xlabel('Time (seconds)')
 pp.legend(loc = 'best')
-pp.savefig('Figures/Objective_Function_Decrease_vs_Time_' + Iterations + '_Iterations.png')
+pp.savefig('Visuals/Figures/Objective_Function_Decrease_vs_Time_' + Iterations + '_Iterations.png')
 pp.show()
 
 for key in Data:
 	if key[0] == 'S':
-		if key[-1] == 0:
+		if key == 'SSIM0':
 			subset = 'FISTA'
 		else:
 			subset = 'OSTR ' + key[4:] + ' Subsets'
@@ -70,5 +70,5 @@ for key in Data:
 		pp.ylabel('SSIM')
 		pp.xlabel('Iteration')
 pp.legend(loc = 'best')
-pp.savefig('Figures/SSIM_vs_Iteration_' + Iterations + '_Iterations.png')
+pp.savefig('Visuals/Figures/SSIM_vs_Iteration_' + Iterations + '_Iterations.png')
 pp.show()
