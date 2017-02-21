@@ -6,7 +6,7 @@ import os.path
 
 Iterations = raw_input("How many iterations would you like to plot? \n")
 
-fname = 'Data/Objective_Function_data_' + (Iterations) + 'Iterations.txt'
+fname = 'Data/Objective_Function_data_' + (Iterations) + 'Iterations.npy'
 
 if os.path.exists(fname):
 	print 'Data file', fname, 'exists.'
@@ -15,39 +15,60 @@ else:
 	quit()
 
 file = open(fname,'r')
-Data = np.loadtxt(file)
+Data = np.load(file)
+Data = Data[()]
 
-# FISTA Data
-Time_FISTA = np.transpose(Data[1][:])
-objective_FISTA = np.transpose(Data[0][:])
-objective_decrease_FISTA = np.zeros((int(Iterations)-1,1))
-objective_decrease_FISTA = objective_FISTA[0] - objective_FISTA
-
-# OSTR Data
-Time_OSTR = np.transpose(Data[3][:])
-objective_OSTR = np.transpose(Data[2][:])
-objective_decrease_OSTR = np.zeros((int(Iterations)-1,1))
-objective_decrease_OSTR = objective_OSTR[0] - objective_OSTR 
-	
-
-# Plot the objective function vs time
-pp.figure(1)
-pp.plot(Time_FISTA, objective_FISTA, label='FISTA')
-pp.plot(Time_OSTR, objective_OSTR, label='OSTR')
-pp.title('Plot of objective function vs time')
-pp.ylabel('objective function')
-pp.xlabel('Time (seconds)')
-pp.legend()
-pp.show()
+# Plot Objective Function
+for key in Data:
+	if key[0] == 'T':
+		time = Data[key]
+		sub = key[4:]
+		if key[-1] == 0:
+			subset = 'FISTA'
+		else:
+			subset = 'OSTR ' + key[4:] + ' Subsets'		
+		objective = Data['Itr'+sub]
+		pp.figure(1)
+		pp.plot(time,objective,label = subset)
+		pp.title('Plot of objective function vs time - ' + Iterations +' Iterations')
+		pp.ylabel('objective function')
+		pp.xlabel('Time (seconds)')
+pp.legend(loc = 'best')
 pp.savefig('Figures/Objective_Function_vs_Time_' + Iterations + '_Iterations.png')
-pp.close()
-# Plot the objective function decrease vs time
-pp.figure(2)
-pp.plot(Time_FISTA,objective_decrease_FISTA, label='FISTA')
-pp.plot(Time_OSTR,objective_decrease_OSTR, label='OSTR')
-pp.title('Plot of objective function decrease vs time')
-pp.ylabel('objective function decrease')
-pp.xlabel('Time (seconds)')
 pp.show()
+
+# Plot Objective Function Decrease
+for key in Data:
+	if key[0] == 'T':
+		time = Data[key]
+		sub = key[4:]
+		if key[-1] == 0:
+			subset = 'FISTA'
+		else:
+			subset = 'OSTR ' + key[4:] + ' Subsets'
+		objective = Data['Itr'+sub]
+		objective_decrease = objective[0] - objective
+		pp.figure(2)
+		pp.plot(time,objective_decrease,label = subset)
+		pp.title('Plot of objective function decrease vs time - ' + Iterations +' Iterations')
+		pp.ylabel('objective function decrease')
+		pp.xlabel('Time (seconds)')
+pp.legend(loc = 'best')
 pp.savefig('Figures/Objective_Function_Decrease_vs_Time_' + Iterations + '_Iterations.png')
-pp.close()
+pp.show()
+
+for key in Data:
+	if key[0] == 'S':
+		if key[-1] == 0:
+			subset = 'FISTA'
+		else:
+			subset = 'OSTR ' + key[4:] + ' Subsets'
+		SSIM = Data[key]
+		pp.figure(3)
+		pp.plot(SSIM,label = subset)
+		pp.title('Plot of SSIM vs iteration - ' + Iterations +' Iterations')
+		pp.ylabel('SSIM')
+		pp.xlabel('Iteration')
+pp.legend(loc = 'best')
+pp.savefig('Figures/SSIM_vs_Iteration_' + Iterations + '_Iterations.png')
+pp.show()
