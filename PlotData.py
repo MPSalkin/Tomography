@@ -6,7 +6,7 @@ import os.path
 
 Iterations = raw_input("How many iterations would you like to plot? \n")
 
-fname = 'Data/Objective_Function_data_' + (Iterations) + 'Iterations.npy'
+fname = 'Visuals/Data/Objective_Function_data_' + (Iterations) + 'Iterations.npy'
 
 if os.path.exists(fname):
 	print 'Data file', fname, 'exists.'
