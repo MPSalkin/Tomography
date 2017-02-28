@@ -33,39 +33,29 @@ def importOS():
 # Gradient function (y = counts; b = flat; r = dark)
 def grad(l,counts,dark,flat):
     tmp = flat * np.exp(-l)
-    tmp = ((counts)/(dark+tmp)-1)*tmp 
-    return tmp
+    return ((counts)/(dark+tmp)-1)*tmp 
 
 # Objective function
 def hreg(l,counts,dark,flat):
     tmp1 = tmp = flat*np.exp(-l) + dark
-    tmp[tmp<0]=0
-    tmp=np.log(tmp)
-    tmp[tmp==1]=0
-    tmp = tmp1 - counts*tmp
-    return tmp
-
-# Split image into M subests 
-def split(a, n):
-    k, m = divmod(len(a), n)
-    return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in xrange(n))
-
+    tmp[tmp<0] = 0
+    tmp = np.log(tmp)
+    tmp[tmp==1] = 0
+    return tmp1 - counts*tmp
 
 if __name__ == "__main__":
-    # Import Ordered Subset data
+    # Import data
     IMAGE, counts, dark, flat, fast_radon, fast_transp = importOS()
-    
+
     # Get dimensions of sinogram
     row,col = counts.shape
 
-    # initialize splits and image
-    N = 5 # Number of iterations
+    # initialize 
+    N = 1 # Number of iterations
     M = 1
-    x = np.zeros((row,row)) * ( np.sum(counts) / np.sum( fast_radon( np.ones((row,row)) ) ) )
+    x = np.zeros((row,row)) * ( np.sum(counts) / np.sum( fast_radon( np.ones((row,col)) ) ) )
   
     # Preallocate parameters    
-    lam = .0005 #1.1*10**(-1)
-    tau = 10**(-5)
     T = np.zeros((N,1))
     obj = np.zeros((N,1))
     SSIM = np.zeros((N,1))
@@ -73,10 +63,13 @@ if __name__ == "__main__":
     start_time = time.time()
     row,col = x.shape
 
-    R = fast_transp(fast_radon(np.identity(row)))
-    print R
-    pj = np.sum(R,0)
+    lam = 10**(-2)#2.5*10**(-3)
+    tau = 10**(-14)#1.1*10**(-4)
+
+    R = fast_transp(fast_radon(np.ones((row,col))))
+    pj = np.max(np.sum(R,0))
     D = np.zeros((row,col))
+    print('pj', pj)
 
     # Main loop for OSTR image reconstruction algorithm
     for n in range(0,N):
@@ -87,11 +80,14 @@ if __name__ == "__main__":
         for j in range(0,col):
             for i in range(0,row):                
                 if x[i,j] <= tau and g[i,j] <= 0:
-                    D[i,j] = tau/pj[j]
+                    D[i,j] = tau/pj
                 else:
-                    D[i,j] = x[i,j]/pj[j]
+                    D[i,j] = x[i,j]/pj
+        mx = np.min(np.abs(x))
 
+        print 'mx', mx
         x = x - lam*D*g
+        x[x<0] = 0
 
         #Store time immediately after iteration
         #iteration_time = np.sum(subiter_time)
@@ -107,8 +103,6 @@ if __name__ == "__main__":
         #Compute and store objective function
         obj[n,0] = np.sum(hreg(fast_radon(x),counts,dark,flat))
         #Keep track of itreations
-
-            
 
     # Save objective function and time values
     sd.saveme(obj,T,SSIM,N,M,'OSTR')
@@ -131,26 +125,26 @@ if __name__ == "__main__":
     # 		extent = ( image_sino.top_left[ 0 ], image_sino.bottom_right[ 0 ], image_sino.bottom_right[ 1 ], image_sino.top_left[ 1 ] ))
     # pp.show()
 
-    # # Plot the objective function vs time
-    # pp.figure(1)
-    # pp.plot(T,obj)
-    # pp.ylabel('objective function')
-    # pp.xlabel('Time (in seconds)')
-    # pp.show()
+    # Plot the objective function vs time
+    pp.figure(1)
+    pp.plot(T,obj)
+    pp.ylabel('objective function')
+    pp.xlabel('Time (in seconds)')
+    pp.show()
     
-    # # Plot the objective function decrease vs time
-    # pp.figure(2)
-    # pp.plot(T,obj2)
-    # pp.ylabel('objective function decrease')
-    # pp.xlabel('Time (in seconds)')
-    # pp.show()
+    # Plot the objective function decrease vs time
+    pp.figure(2)
+    pp.plot(T,obj2)
+    pp.ylabel('objective function decrease')
+    pp.xlabel('Time (in seconds)')
+    pp.show()
     
     # Display reconstructed image
     pp.figure(4)
     image = pr.image( x , top_left =  (-1,1), bottom_right = (1, -1) ) 
     pp.imshow( image, cmap = 'gray', interpolation = 'nearest', 
               extent = ( image.top_left[ 0 ], image.bottom_right[ 0 ], image.bottom_right[ 1 ], image.top_left[ 1 ] ))
-    pp.title('OSTR ' + str(M) + ' Subsets - ' + str(N) + 'Iterations (Moderate Noise)')
+    pp.title('SAEM ' + str(M) + ' Subsets - ' + str(N) + 'Iterations (Moderate Noise)')
     pp.savefig('Visuals/Images/OSTR_noisy_reconstruct_'+ str(N) + '_Iter_' + str(M) + '_Subsets.png')
     pp.show()
 
