@@ -78,12 +78,9 @@ if __name__ == "__main__":
 
         g = fast_transp(grad(fast_radon(x),counts,dark,flat))
 
-        for j in range(0,col):
-            for i in range(0,row):                
-                if x[i,j] <= tau and g[i,j] <= 0:
-                    D[i,j] = tau/pj[i,j]
-                else:
-                    D[i,j] = x[i,j]/pj[i,j]
+        D = x
+        D[(x<tau)&(g<0)]=tau
+        D = D/pj        
 
         x = x - lam*D*g
         itr += 1
