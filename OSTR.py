@@ -10,7 +10,7 @@ from skimage.measure import compare_ssim as ssim
 
 # Function used to import data and radon function for data
 def importOS():
-    IMAGE = pr.image_read( 'sl.mat')
+    IMAGE = pr.image_read( 'TomoData/PhantomData/sl.mat')
     counts = pr.image_read( 'TomoData/noisyphantom/nslcounts.mat', dtype=np.float32 ) 
     print 'counts',counts.shape
     dark = pr.image_read( 'TomoData/noisyphantom/nsldark.mat', dtype=np.float32  ) 
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     for n in range(0,N):
         iter_begin = time.time()
         # Nested loop to iterate over M subsets
-        for mm in range(0,M):
+        for mm in np.random.permutation(M):
             #subiter_start = time.time()
             l = fast_radon[mm](x)
             h_dot = grad(l,counts[mm],dark[mm],flat[mm])

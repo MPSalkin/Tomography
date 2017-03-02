@@ -51,10 +51,10 @@ if __name__ == "__main__":
     row,col = counts.shape
 
     # initialize 
-    N = 1 # Number of iterations
+    N = 10 # Number of iterations
     M = 1
-    x = np.zeros((row,row)) * ( np.sum(counts) / np.sum( fast_radon( np.ones((row,col)) ) ) )
-  
+    #x = np.zeros((row,row)) * ( np.sum(counts) / np.sum( fast_radon( np.ones((row,col)) ) ) )
+    x = np.ones((row,row))*0.1
     # Preallocate parameters    
     T = np.zeros((N,1))
     obj = np.zeros((N,1))
@@ -63,11 +63,12 @@ if __name__ == "__main__":
     start_time = time.time()
     row,col = x.shape
 
-    lam = 10**(-2)#2.5*10**(-3)
+    lam = 2*10**(0)#2.5*10**(-3)
+    lam0 = lam
     tau = 10**(-14)#1.1*10**(-4)
 
-    R = fast_transp(fast_radon(np.ones((row,col))))
-    pj = np.max(np.sum(R,0))
+    R = flat*np.exp(-fast_radon(x))
+    pj = R
     D = np.zeros((row,col))
     print('pj', pj)
 
@@ -80,15 +81,15 @@ if __name__ == "__main__":
         for j in range(0,col):
             for i in range(0,row):                
                 if x[i,j] <= tau and g[i,j] <= 0:
-                    D[i,j] = tau/pj
+                    D[i,j] = tau/pj[i,j]
                 else:
-                    D[i,j] = x[i,j]/pj
-        mx = np.min(np.abs(x))
+                    D[i,j] = x[i,j]/pj[i,j]
 
-        print 'mx', mx
         x = x - lam*D*g
-        x[x<0] = 0
-
+        itr += 1
+        lam = lam0/(itr+1)**0.25
+        mx = np.min(x)
+        print(mx)
         #Store time immediately after iteration
         #iteration_time = np.sum(subiter_time)
         iteration_time = time.time() - iter_begin
@@ -96,7 +97,7 @@ if __name__ == "__main__":
             T[n,0] = iteration_time - start_time + iter_begin
         else:
             T[n,0] = iteration_time + T[n-1,0]
-        itr += 1
+        
         print 'Iteration:',itr
         SSIM[n,0] = ssim(IMAGE,x)
         #compute elapsed time
