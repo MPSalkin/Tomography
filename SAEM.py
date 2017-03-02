@@ -53,7 +53,7 @@ if __name__ == "__main__":
     # initialize 
     N = 10 # Number of iterations
     M = 1
-    #x = np.zeros((row,row)) * ( np.sum(counts) / np.sum( fast_radon( np.ones((row,col)) ) ) )
+    #x = np.ones((row,row)) * ( np.sum(counts) / np.sum( fast_radon( np.ones((row,col)) ) ) )
     x = np.ones((row,row))*0.1
     # Preallocate parameters    
     T = np.zeros((N,1))
@@ -63,11 +63,11 @@ if __name__ == "__main__":
     start_time = time.time()
     row,col = x.shape
 
-    lam = 2*10**(0)#2.5*10**(-3)
+    lam =1*10**(1)#2.5*10**(-3)
     lam0 = lam
     tau = 10**(-14)#1.1*10**(-4)
 
-    R = flat*np.exp(-fast_radon(x))
+    R = fast_transp(flat*np.exp(-fast_radon(x)))
     pj = R
     D = np.zeros((row,col))
     print('pj', pj)

@@ -32,7 +32,7 @@ def importPhoto():
 # Function used to import sinogram data and radon function for data
 def importSino():
 	# sino = pr.image_read( 'egg_slice_1097.mat' ) 
-	sl = pr.image_read( 'sl.mat' ) 
+	sl = pr.image_read( 'TomoData/PhantomData/sl.mat') 
 	# sino = pr.image_read( 'slcount.mat', dtype=np.float32 ) 
 	# flat = pr.image_read( 'slflat.mat', dtype=np.float32  ) 
 	# dark = pr.image_read( 'sldark.mat', dtype=np.float32  )
@@ -102,7 +102,7 @@ t = 1
 count = 0
 x = y 
 
-itr = 20
+itr = 10
 T = np.zeros((itr,1))
 obj = np.zeros((itr,1))
 SSIM = np.zeros((itr,1))
