@@ -1,9 +1,7 @@
 import numpy as np
 import os.path
-import json
-import csv
 
-def saveme(objective, Time, SSIM, Iterations, SubSets, Algorithm):
+def saveme(objective, Time, SSIM, Iterations, SubSets):
 	fname = 'Visuals/Data/Objective_Function_data_' + str(Iterations) + 'Iterations.npy'
 
 	if os.path.exists(fname):
