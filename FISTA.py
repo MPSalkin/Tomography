@@ -93,6 +93,14 @@ m,n = b.shape
 print m,n
 print 'Image', A.shape
 
+# variables that can be precomputed with knowledge of geometry of problem
+itr = 10
+T = np.zeros((itr,1))
+obj = np.zeros((itr,1))
+SSIM = np.zeros((itr,1))
+
+
+
 # Constants and initialization
 gamma = 1.1*10**(-4)
 tau = pow(10,-4)
@@ -101,13 +109,7 @@ x0 = np.ones((m,m))
 t = 1
 count = 0
 x = y 
-
-itr = 10
-T = np.zeros((itr,1))
-obj = np.zeros((itr,1))
-SSIM = np.zeros((itr,1))
 start_time = time.time()
-
 # Main loop for FISTA image reconstruction algorithm
 for i in range(0,itr):
 	# Print iteration number
@@ -140,7 +142,7 @@ for i in range(0,itr):
     #SSIM[i,0] = ssim(A,x)
         
 # Save objective function and time values
-sd.saveme(obj,T,SSIM,itr,0,'FISTA')
+sd.saveme(obj,T,SSIM,itr,0)
 
 # Print Recovered Image, Time, and Objective Function data
 print 'ImageData', x
@@ -179,6 +181,6 @@ pp.figure(4)
 image = pr.image( x , top_left =  (-1,1), bottom_right = (1, -1) ) 
 FISTA_image = pp.imshow( image, cmap = 'gray', interpolation = 'nearest', 
 		extent = ( image.top_left[ 0 ], image.bottom_right[ 0 ], image.bottom_right[ 1 ], image.top_left[ 1 ] ))
-pp.title('FISTA (ML) - 20 Iterations (Moderate Noise)')
+pp.title('FISTA (ML) - 10 Iterations (Moderate Noise)')
 pp.savefig('Visuals/Images/FISTA_noisy_reconstruct_' + str(itr) + '_ITR' '.png')
 pp.show(FISTA_image)

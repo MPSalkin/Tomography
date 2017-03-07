@@ -38,7 +38,8 @@ def grad(l,counts,dark,flat):
 
 # Objective function
 def hreg(l,counts,dark,flat):
-    tmp1 = tmp = flat*np.exp(-l) + dark
+    tmp = flat*np.exp(-l) + dark
+    tmp1 = tmp
     tmp[tmp<0]=0
     tmp=np.log(tmp)
     tmp[tmp==1]=0
@@ -64,8 +65,8 @@ if __name__ == "__main__":
     row,col = tmp_counts.shape
 
     # initialize splits and image
-    M = 20 # Number of subsets
-    N = 20 # Number of iterations
+    M = 4 # Number of subsets
+    N = 10 # Number of iterations
     # x = np.zeros((row,row)) * ( np.sum(tmp_counts) / np.sum( ffast_radon( np.ones((row,row)) ) ) )
     x = np.ones((row,row))*0.1
     
@@ -93,42 +94,33 @@ if __name__ == "__main__":
     SSIM = np.zeros((N,1))
     subseth = np.zeros((M,1))
     itr = 0
-    subiter_time = np.zeros((M,1))
-    start_time = time.time()
-    # Preallocate parameters
-    gamma = ffast_radon( np.ones((row,row)) )
-    d_star = ffast_transp( gamma * (tmp_counts - tmp_dark)**2 / tmp_counts )
-
-
     row,col = x.shape
-
-    lam = 2*10**(0)#2.5*10**(-3)
+    subiter_time = np.zeros((M,1))
+    D = np.zeros((row,col))
+    # Preallocate parameters
+    lam = 2.15*10**(1)#2.5*10**(-3)
     lam0 = lam
     tau = 10**(-14)#1.1*10**(-4)
-
-    D = np.zeros((row,col))
-    pj = ffast_transp(tmp_counts-tmp_dark)
+    #pj = ffast_transp(tmp_counts-tmp_dark)
     pj = ffast_transp(tmp_flat*np.exp(-ffast_radon(x)))
-
     # Main loop for SSAEM image reconstruction algorithm
+    start_time = time.time()
     for n in range(0,N):
         iter_begin = time.time()
-        print 'Iteration:',itr
+        print 'Iteration:',itr+1
 
         # Nested loop to iterate over M subsets
         for mm in np.random.permutation(M):
             #subiter_start = time.time()
 
             g = fast_transp[mm](grad(fast_radon[mm](x),counts[mm],dark[mm],flat[mm]))
-
-            D = x/pj
-            D[(x<=tau) & (g<=0)] = tau/pj[(x<=tau) & (g<=0)]
-
+            D = x
+            D[(x<=tau) & (g<=0)] = tau
+            D = D/pj
             x = x - lam*D*g
-            lam = lam0/(n+1)**0.25
-            mx = np.min(x)
-            print(mx)
-
+            #mx = np.min(x)
+            #print(mx)
+        lam = lam0/(n+1)**0.25
             #subiter_time[mm] = time.time()-subiter_start
             #subseth[mm] = np.sum(hreg(l,counts[mm],dark[mm],flat[mm]))
             

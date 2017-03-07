@@ -4,6 +4,7 @@ import numpy as np
 import math
 import pynfft.nfft as nf
 import warnings
+import matplotlib.pyplot as pp
 
 # TODO: Take sinogram's t_extent and image's corners in
 # consideration;
@@ -125,25 +126,34 @@ pp.imshow( rbp2, interpolation = 'nearest' ); pp.colorbar(); pp.show()
       # Execute plan:
       plan.f_hat = img
       fsino = plan.trafo()
-
+      #print(fsino.shape)
       # Assemble sinogram:
       fsino = np.reshape( fsino, ( sino_padded_size, sino.shape[ 1 ] ) )
-
+      #print(fsino.shape)
+      
+      
       # Inverse FFT:
       result = np.fft.ifft( fsino, axis = 0 )
-
+      #print(result.shape)
+      
+      
       # Shift result:
       result = np.fft.ifftshift( result, axes = ( 0, ) )
-
+      #print(result.shape)
       # Remove padding:
+     
       result = result[ delta + odd_sino : result.shape[ 0 ] - delta - extra + odd_sino ]
-
+        
+      #print(result.shape)
       # Get real part:
       result = np.real( result )
-
+      
       # Normalize:
       result /= ( 0.5 * ( sino.shape[ 0 ] - 1 ) )
-
+      #Kino = pr.image( result, top_left = (0,1), bottom_right = (math.pi,-1) )
+      #pp.imshow(Kino,cmap = 'gray_r', interpolation = 'nearest', 
+	#	extent = ( Kino.top_left[ 0 ], Kino.bottom_right[ 0 ], Kino.bottom_right[ 1 ], Kino.top_left[ 1 ] ))
+      #pp.show
       # Return image with appropriate bounding box:
       return pr.image( result, top_left = sino.top_left, bottom_right = sino.bottom_right )
 
