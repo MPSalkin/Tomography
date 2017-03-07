@@ -26,7 +26,7 @@ for key in Data:
 		if key == 'Time0':
 			subset = 'FISTA'
 		else:
-			subset = 'OSTR ' + key[4:] + ' Subsets'		
+			subset = 'SSAEM ' + key[4:] + ' Subsets'		
 		objective = Data['Itr'+sub]
 		pp.figure(1)
 		pp.plot(time,objective,label = subset)
@@ -45,7 +45,7 @@ for key in Data:
 		if key == 'Time0':
 			subset = 'FISTA'
 		else:
-			subset = 'OSTR ' + key[4:] + ' Subsets'
+			subset = 'SSAEM ' + key[4:] + ' Subsets'
 		objective = Data['Itr'+sub]
 		objective_decrease = objective[0] - objective
 		pp.figure(2)
@@ -62,7 +62,7 @@ for key in Data:
 		if key == 'SSIM0':
 			subset = 'FISTA'
 		else:
-			subset = 'OSTR ' + key[4:] + ' Subsets'
+			subset = 'SSAEM ' + key[4:] + ' Subsets'
 		SSIM = Data[key]
 		pp.figure(3)
 		pp.plot(SSIM,label = subset)
