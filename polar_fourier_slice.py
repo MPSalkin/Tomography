@@ -1,10 +1,18 @@
-# I use the one encoding: utf8
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Feb 20 17:46:22 2017
+
+@author: CupulFamily
+"""
+
+
 import pyraft as pr
 import numpy as np
 import math
 import pynfft.nfft as nf
 import warnings
-import matplotlib.pyplot as pp
+import pfft.py as pfft
 
 # TODO: Take sinogram's t_extent and image's corners in
 # consideration;
@@ -32,39 +40,6 @@ def make_fourier_slice_radon_transp( sino, shape = None, sino_zp_factor = 1.5, n
    functions for computing the Radon transform and its numerical transpose.
 
    Usage:
-
-import pyraft as pr
-import matplotlib.pyplot as pp
-import h5py
-import time
-
-f = h5py.File( '/home/elias/curimatã/CM-Day3/tomoTesteH2O.h5', 'r' )
-v = f[ 'images' ]
-sino = pr.image( np.transpose( v[ :, 450, : ] ).astype( np.float64 ), x_extent = ( 0.0, math.pi ) )
-
-fast_radon, fast_transp = make_fourier_slice_radon_transp( sino )
-
-st = time.time()
-bp = fast_transp( sino )
-print 'Done!', time.time() - st
-
-st = time.time()
-bp2 = pr.radon_transpose( sino, np.zeros( bp.shape ) )
-print 'Done!', time.time() - st
-
-pp.imshow( bp, interpolation = 'nearest' ); pp.colorbar(); pp.show()
-pp.imshow( bp2, interpolation = 'nearest' ); pp.colorbar(); pp.show()
-
-st = time.time()
-rbp = fast_radon( bp )
-print 'Done!', time.time() - st
-
-st = time.time()
-rbp2 = pr.radon( bp, pr.image( np.zeros( sino.shape ), x_extent = ( 0.0, math.pi ) ) )
-print 'Done!', time.time() - st
-
-pp.imshow( rbp, interpolation = 'nearest' ); pp.colorbar(); pp.show()
-pp.imshow( rbp2, interpolation = 'nearest' ); pp.colorbar(); pp.show()
 
   """
 
@@ -125,35 +100,26 @@ pp.imshow( rbp2, interpolation = 'nearest' ); pp.colorbar(); pp.show()
 
       # Execute plan:
       plan.f_hat = img
-      fsino = plan.trafo()
-      #print(fsino.shape)
+      fsino = pfft.fft(img,plan.M)
+
       # Assemble sinogram:
       fsino = np.reshape( fsino, ( sino_padded_size, sino.shape[ 1 ] ) )
-      #print(fsino.shape)
-      
-      
+
       # Inverse FFT:
       result = np.fft.ifft( fsino, axis = 0 )
-      #print(result.shape)
-      
-      
+
       # Shift result:
       result = np.fft.ifftshift( result, axes = ( 0, ) )
-      #print(result.shape)
+
       # Remove padding:
-     
       result = result[ delta + odd_sino : result.shape[ 0 ] - delta - extra + odd_sino ]
-        
-      #print(result.shape)
+
       # Get real part:
       result = np.real( result )
-      
+
       # Normalize:
       result /= ( 0.5 * ( sino.shape[ 0 ] - 1 ) )
-      Kino = pr.image(fsino, top_left = (0,1), bottom_right = (math.pi,-1) )
-      pp.imshow(Kino,cmap = 'gray_r', interpolation = 'nearest', 
-		extent = ( Kino.top_left[ 0 ], Kino.bottom_right[ 0 ], Kino.bottom_right[ 1 ], Kino.top_left[ 1 ] ))
-      pp.show
+
       # Return image with appropriate bounding box:
       return pr.image( result, top_left = sino.top_left, bottom_right = sino.bottom_right )
 
@@ -189,42 +155,7 @@ pp.imshow( rbp2, interpolation = 'nearest' ); pp.colorbar(); pp.show()
    return fast_radon, fast_radon_transpose
 
 if __name__ == '__main__':
-   #import pyraft as pr
-   #import matplotlib.pyplot as pp
-   #import h5py
-   #import time
-
-   #f = h5py.File( '/home/elias/curimatã/CM-Day3/tomoTesteH2O.h5', 'r' )
-   #v = f[ 'images' ]
-   #sino = pr.image( np.transpose( v[ :, 450, : ] ).astype( np.float64 ), x_extent = ( 0.0, math.pi ) )
-
-   #fast_radon, fast_transp = make_fourier_slice_radon_transp( sino )
-
-   #st = time.time()
-   #bp = fast_transp( sino )
-   #print 'Done!', time.time() - st
-
-   #st = time.time()
-   #bp2 = pr.radon_transpose( sino, np.zeros( bp.shape, dtype = np.float64 ) )
-   #print 'Done!', time.time() - st
-
-   #print np.max( bp2 ) / np.max( bp ), np.mean( bp2 ) / np.mean( bp )
-
-   #pp.imshow( bp, interpolation = 'nearest' ); pp.colorbar(); pp.show()
-   #pp.imshow( bp2, interpolation = 'nearest' ); pp.colorbar(); pp.show()
-   #pp.imshow( np.absolute( bp2 - bp ), interpolation = 'nearest' ); pp.colorbar(); pp.show()
-
-   #N = 2048; M = 200
-   #img = pr.shepp_logan( ( N, N ) )
-   #fast_radon2, fast_transp2 = make_fourier_slice_radon_transp( pr.image( ( N, M ), x_extent = ( 0.0, math.pi ) ) )
-   #sino2 = fast_radon2( img )
-   #print np.max( sino2 )
-   ##pp.imshow( sino2, interpolation = 'nearest', extent = sino2.extent() ); pp.colorbar(); pp.show()
-   #sino3 = pr.radon( pr.shepp_logan_desc(), pr.image( ( N, M ), x_extent = ( 0.0, math.pi ) ) )
-   ##pp.imshow( sino3, interpolation = 'nearest', extent = sino2.extent() ); pp.colorbar(); pp.show()
-   #pp.imshow( np.absolute( ( sino2 - sino3 ) ), extent = sino2.extent(), interpolation = 'nearest' ); pp.colorbar(); pp.show()
-   #t = np.arange( sino2.shape[ 0 ] )
-   #pp.plot( t, np.absolute( sino2[ :, 0 ] ), t + 1, np.flipud( sino2[ :, sino2.shape[ 1 ] - 1 ] ), 'r' ); pp.show()
+    
    import pyraft as pr
    import matplotlib.pyplot as pp
    import h5py

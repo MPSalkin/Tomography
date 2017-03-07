@@ -65,7 +65,7 @@ if __name__ == "__main__":
     row,col = tmp_counts.shape
 
     # initialize splits and image
-    M = 4 # Number of subsets
+    M = 5 # Number of subsets
     N = 10 # Number of iterations
     # x = np.zeros((row,row)) * ( np.sum(tmp_counts) / np.sum( ffast_radon( np.ones((row,row)) ) ) )
     x = np.ones((row,row))*0.1
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     subiter_time = np.zeros((M,1))
     D = np.zeros((row,col))
     # Preallocate parameters
-    lam = 2.15*10**(1)#2.5*10**(-3)
+    lam = 2.4*10**(1)#2.5*10**(-3)
     lam0 = lam
     tau = 10**(-14)#1.1*10**(-4)
     #pj = ffast_transp(tmp_counts-tmp_dark)
