@@ -16,7 +16,7 @@ def fft(img):
     A = np.ones((15,15))
     #A = pr.image_read( 'TomoData/PhantomData/sl.mat')
     r,c = A.shape
-    global PAD 
+    global PAD, r
     PAD = (r+3)/2
     print(PAD)
     A = np.pad(A, PAD, 'minimum')
@@ -75,8 +75,8 @@ def fft(img):
                 p = -l    
             for n in range(0,r):
                 #II.9 Completion of 2-D FFT scaled X then Y axis
-                Fx1[0,k]    = Fx1[0,k] +    fx[n,k]   *np.exp(-1j*2*np.pi*abs(C[k])*R[CTR+p]*beta*SN[n]/(l*(N+1)))
-                Fx2[0,-k-1] = Fx2[0,-k-1] + fx[n,-k-1]*np.exp(-1j*2*np.pi*abs(C[-k-1])*R[CTR-p]*beta*SN[n]/(l*(N+1)))
+                Fx1[0,k]    = Fx1[0,k] +    fx[n,k]   *np.exp(-1j*2*np.pi*abs(C[k])*R[CTR-p]*beta*SN[n]/(l*(N+1)))
+                Fx2[0,-k-1] = Fx2[0,-k-1] + fx[n,-k-1]*np.exp(-1j*2*np.pi*abs(C[-k-1])*R[CTR+p]*beta*SN[n]/(l*(N+1)))
                 
                 #II.10 Completion of 2-D FFT scaled Y then X axis
                 Fy1[0,k] = Fy1[0,k] + fy[k,n]*np.exp(-1j*2*np.pi*abs(R[k])*C[CTR+p]*beta*SN[n]/(l*(N+1)))
@@ -104,6 +104,10 @@ def adjoint(img):
 
 if __name__ == "__main__":
     Kino = fft(1)
+    L = range(0,r)
+    L = L[::-1]
+    print(L)
+    Kino = Kino[L,:]
     Kino = np.fft.fftshift(Kino, axes = (0,))
     print(Kino.shape)
     Kino = pr.image(Kino, top_left = (0,1), bottom_right = (math.pi,-1))
