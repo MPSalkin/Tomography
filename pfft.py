@@ -13,7 +13,7 @@ import matplotlib.pyplot as pp
 
 def fft(img):
     nfft_zp_factor = 1.2
-    A = np.ones((15,15))
+    A = np.ones((11,11))
     #A = pr.image_read( 'TomoData/PhantomData/sl.mat')
     r,c = A.shape
     global PAD, r
