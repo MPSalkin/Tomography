@@ -7,29 +7,75 @@ import math
 import time
 import savedata as sd
 from skimage.measure import compare_ssim as ssim
+import pseudopolar_fourier_slice as ppfs
+import P_INTERP_PP as PIPP
 
 # Function used to import data and radon function for data
-def importOS():
-    IMAGE = pr.image_read( 'TomoData/PhantomData/sl.mat')
-    counts = pr.image_read( 'TomoData/noisyphantom/nslcounts.mat', dtype=np.float32 ) 
-    print 'counts',counts.shape
-    dark = pr.image_read( 'TomoData/noisyphantom/nsldark.mat', dtype=np.float32  ) 
-    print 'dark', dark.shape
-    flat = pr.image_read( 'TomoData/noisyphantom/nslflat.mat', dtype=np.float32  ) 
-    print 'flat', flat.shape
-    # flat = np.zeros(counts.shape)
-    #pp.imshow( sino, cmap = 'gray_r', interpolation = 'nearest', 
-		#extent = ( sl.top_left[ 0 ], sl.bottom_right[ 0 ], sl.bottom_right[ 1 ], sl.top_left[ 1 ] ))
-    #pp.show()
+def nonuimportSino():
+    if data_case ==0:
+        sl = pr.image_read( 'TomoData/PhantomData/sl.mat') 
+        flat = pr.image_read( 'TomoData/PhantomData/slflat.mat', dtype=np.float32  ) 
+        dark = pr.image_read( 'TomoData/PhantomData/sldark.mat', dtype=np.float32  )
+        counts = pr.image_read( 'TomoData/PhantomData/slcount.mat', dtype=np.float32 ) 
+    elif data_case ==1:
+        sl = pr.image_read( 'TomoData/PhantomData/sl.mat') 
+        counts = pr.image_read( 'TomoData/noisyphantom/nslcounts.mat', dtype=np.float32 ) 
+        flat = pr.image_read( 'TomoData/noisyphantom/nslflat.mat', dtype=np.float32  ) 
+        dark = pr.image_read( 'TomoData/noisyphantom/nsldark.mat', dtype=np.float32  )
+    elif data_case ==2:
+        sl = pr.image(np.ones((2048,2048)), top_left =(-1,1), bottom_right = (1,-1)) 
+        flat = pr.image_read( 'TomoData/SeedData/flati.mat', dtype=np.float32  ) 
+        dark = pr.image_read( 'TomoData/SeedData/darki.mat', dtype=np.float32  ) 
+        counts = pr.image_read( 'TomoData/SeedData/countsi.mat', dtype=np.float32 ) 
+    else:
+        print('not a valid data_case, you can insert custom data here')
+        quit()
+        
+    sino = pr.image(np.log(flat/counts), top_left = (0,1),bottom_right=(np.pi,-1))
+    function = fs.make_fourier_slice_radon_transp
+    fast_radon, fast_transp = function( sino )
+    
+    return sl, sino, counts, dark, flat, fast_radon, fast_transp, function      
 
-    fast_radon, fast_transp = fs.make_fourier_slice_radon_transp( counts )
+    
+def pseudoimportSino(data_case):
+    if data_case ==0:
+        sl = pr.image_read( 'TomoData/PhantomData/sl2.mat', dtype=np.float32) 
+        flat = pr.image_read( 'TomoData/PhantomData/slflat.mat', dtype=np.float32  ) 
+        dark = pr.image_read( 'TomoData/PhantomData/sldark.mat', dtype=np.float32  )
+        counts = pr.image_read( 'TomoData/PhantomData/slcount.mat', dtype=np.float32 ) 
+    elif data_case == 1:
+        flat = pr.image_read( 'TomoData/noisyphantom/nslflat.mat', dtype=np.float32  ) 
+        dark = pr.image_read( 'TomoData/noisyphantom/nsldark.mat', dtype=np.float32  ) 
+        counts = pr.image_read( 'TomoData/noisyphantom/nslcounts.mat', dtype=np.float32 ) 
+    elif data_case ==2:
+        sl = pr.image(np.ones((1024,1024)), top_left =(-1,1), bottom_right = (1,-1)) 
+        flat = pr.image_read( 'TomoData/SeedData/flati.mat', dtype=np.float32  ) 
+        dark = pr.image_read( 'TomoData/SeedData/darki.mat', dtype=np.float32  ) 
+        counts = pr.image_read( 'TomoData/SeedData/countsi.mat', dtype=np.float32 ) 
+    else:
+        print('not a valid data_case, you can insert custom data here')
+        quit()
+    n,k = sl.shape
+    sino = np.log(flat/counts)
+    sino = PIPP.Pad2x(sino)
+    print(np.max(sino))
+    fsino = np.fft.fftshift(sino, axes = 0)
+    fsino = np.fft.fft( fsino, axis = 0 )
+    fsino = np.fft.fftshift(fsino)
+    fsino = PIPP.P_INTERP_PP(fsino)
+    fsino = np.fft.fftshift(fsino )
+    fsino = np.fft.ifft( fsino, axis = 0 )
+    sino= (np.real(np.fft.ifftshift(fsino, axes=0)))
+    sino= pr.image(np.concatenate((np.fliplr(np.flipud(sino[:,0:n])),np.fliplr(sino[:,n::])),1), top_left = (0,1), bottom_right = (np.pi,-1) )
+    print(np.min(counts))
+    counts = pr.image(flat/np.exp(sino), top_left = (0,1), bottom_right = (np.pi,-1) )
+    function = ppfs.make_fourier_slice_radon_transp
+    fast_radon, fast_transp = function( sino )
+    
+    return sl, sino, counts, dark, flat, fast_radon, fast_transp, function     
 
-    #pp.imshow( sino, cmap = 'gray_r', interpolation = 'nearest', 
-               #extent = ( sino.top_left[ 0 ], sino.bottom_right[ 0 ], sino.bottom_right[ 1 ], sino.top_left[ 1 ] ))
-    #pp.show()
-	
-    return IMAGE, counts, dark, flat, fast_radon, fast_transp
-
+    
 # Gradient function (y = counts; b = flat; r = dark)
 def grad(l,counts,dark,flat):
     const = flat * np.exp(-l)
@@ -45,31 +91,45 @@ def hreg(l,counts,dark,flat):
     tmp[tmp==1]=0
     tmp = tmp1 - counts*tmp
     return tmp
-# c(l) function
-# def c_l(l,counts,dark,flat):
-#     y_bar = flat * np.exp(-l) + dark	
-#     l[l>0]= ( 2 / l ** 2) * (flat * (1 - np.exp(-l)) - counts * np.log((flat + dark) / y_bar) + l * flat * np.exp(-l) * (counts/y_bar -1))			
-#     l[l==0] = flat * (1 - counts * dark / (flat + dark)**2 )
-#     return l
 
 # Split image into M subests 
 def split(a, n):
     k, m = divmod(len(a), n)
     return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in xrange(n))
 
+def ImportData(method_import,data_case):
+    if method_import == 0:
+        A, b, counts, dark, flat, fast_radon, fast_transp, function = nonuimportSino(data_case)
+        N = [5.0*10**(1),3.5*10**(1),2.15*10**(1)] #stored lambda values # 4 subsets
+        #N = [5.0*10**(1),3.5*10**(1),2.15*10**(1)] #stored lambda values # X subsets
+        return A, counts, dark,flat, fast_radon, fast_transp, function, N[data_case]
+    elif method_import == 1:
+        A, b, counts, dark, flat, fast_radon, fast_transp, function = pseudoimportSino(data_case)
+        N = [5.0*10**(0),4.56365*10**(0) ,4.0*10**(0)] #stored lambda values
+        return A, counts, dark,flat, fast_radon, fast_transp, function, N[data_case]
+    elif method_import == 2:
+        A, b, counts, dark, flat, fast_radon, fast_transp, function  = polarimportSino(data_case)
+        N = [1.1*10**(-4),1.1*10**(-4),1.1*10**(-4)] #stored lambda values 
+        return A, counts, dark,flat, fast_radon, fast_transp, function, N[data_case]
+    else:
+        print('choose a valid import case')
+        quit()
 
 if __name__ == "__main__":
+    Method = 1 #0 = NFFT, 1 = PPFFT, 2 = PFFT
+    Data = 2  #0 = CLEAN PHANTOM, 1 = NOISY PHANTOM, 2=APPLESEED 
+    M = 2 # Number of subsets
+    N = 10 # Number of iterations
+    
     # Import Ordered Subset data
-    IMAGE, tmp_counts, tmp_dark, tmp_flat, ffast_radon, ffast_transp = importOS()
+    IMAGE, tmp_counts, tmp_dark, tmp_flat, ffast_radon, ffast_transp, FUN, lam = ImportData(Method,Data)
     # Get dimensions of sinogram
     row,col = tmp_counts.shape
-
+    row2,col2 = IMAGE.shape
     # initialize splits and image
-    M = 5 # Number of subsets
-    N = 10 # Number of iterations
-    # x = np.zeros((row,row)) * ( np.sum(tmp_counts) / np.sum( ffast_radon( np.ones((row,row)) ) ) )
-    x = np.ones((row,row))*0.1
-    
+    x = np.ones((row2,row2))*0.9
+    #x = np.ones((row2,row2))*(np.sum(tmp_counts) / np.sum( ffast_radon( np.ones((row2,row2)) ) ) )
+
     # Create M subsets of sinogram
     col_M = list(split(range(col),M))
     fast_radon = [None]*M
@@ -83,7 +143,7 @@ if __name__ == "__main__":
         len_col_m = len(col_M[i])
         sino = pr.image( np.zeros( (row, len_col_m) ) , 
                         top_left =  (col_M[i][0]*math.pi/(col-1), 1), bottom_right = (col_M[i][-1]*math.pi/(col-1), -1) ) 
-        fast_radon[i], fast_transp[i] = fs.make_fourier_slice_radon_transp( sino )
+        fast_radon[i], fast_transp[i] = FUN( sino )
         counts[i] = tmp_counts[:,col_M[i]]
         dark[i] = tmp_dark[:,col_M[i]]
         flat[i] = tmp_flat[:,col_M[i]]
@@ -98,9 +158,13 @@ if __name__ == "__main__":
     subiter_time = np.zeros((M,1))
     D = np.zeros((row,col))
     # Preallocate parameters
-    lam = 2.4*10**(1)#2.5*10**(-3)
+    #lam = 1.5*10**(1)#5.0*10**(1) #3.5*10**(1)#2.15*10**(1) #for noisy data #3.0625*10**(0)
+    #lam = 3.7*1-1**(1)#5.0*10**(1) #3.7*10**(1)#3.12*10**(1)# #for clean data
+    #lam = 4.56365*10**(0) # pseudopolar noisy
+    #lam = 5.0*10**(0) # pseudopolar clean
+    #lam = 4.0*10**(0) # pseudopolar appleseed
+    tau = 10**(-8)#1.1*10**(-4)
     lam0 = lam
-    tau = 10**(-14)#1.1*10**(-4)
     #pj = ffast_transp(tmp_counts-tmp_dark)
     pj = ffast_transp(tmp_flat*np.exp(-ffast_radon(x)))
     # Main loop for SSAEM image reconstruction algorithm
@@ -108,19 +172,18 @@ if __name__ == "__main__":
     for n in range(0,N):
         iter_begin = time.time()
         print 'Iteration:',itr+1
-
+        
         # Nested loop to iterate over M subsets
         for mm in np.random.permutation(M):
             #subiter_start = time.time()
-
             g = fast_transp[mm](grad(fast_radon[mm](x),counts[mm],dark[mm],flat[mm]))
             D = x
             D[(x<=tau) & (g<=0)] = tau
             D = D/pj
             x = x - lam*D*g
-            #mx = np.min(x)
-            #print(mx)
+            print(np.min(x))
         lam = lam0/(n+1)**0.25
+        
             #subiter_time[mm] = time.time()-subiter_start
             #subseth[mm] = np.sum(hreg(l,counts[mm],dark[mm],flat[mm]))
             
@@ -131,7 +194,7 @@ if __name__ == "__main__":
             T[n,0] = iteration_time - start_time + iter_begin
         else:
             T[n,0] = iteration_time + T[n-1,0]
-        SSIM[n,0] = ssim(IMAGE,x)
+        SSIM[n,0] = ssim(IMAGE,x/np.max(x))
         #Compute and store objective function
         obj[n,0] = np.sum(hreg(ffast_radon(x),tmp_counts,tmp_dark,tmp_flat))
         
@@ -178,9 +241,10 @@ if __name__ == "__main__":
     # Display reconstructed image
     pp.figure(4)
     image = pr.image( x , top_left =  (-1,1), bottom_right = (1, -1) ) 
-    pp.imshow( image, cmap = 'gray', interpolation = 'nearest', 
+    SSAEM_image=pp.imshow( image, cmap = 'gray', interpolation = 'nearest', 
               extent = ( image.top_left[ 0 ], image.bottom_right[ 0 ], image.bottom_right[ 1 ], image.top_left[ 1 ] ))
-    pp.title('SSAEM ' + str(M) + ' Subsets - ' + str(N) + 'Iterations (Moderate Noise)')
-    pp.savefig('Visuals/Images/OSTR_noisy_reconstruct_'+ str(N) + '_Iter_' + str(M) + '_Subsets.png')
-    pp.show()
+    pp.title('SSAEM ' + str(M) + ' Subsets - ' + str(N) + 'Iterations')
+    pp.savefig('Visuals/Images/SSAEM_noisy_reconstruct_'+ str(N) + '_Iter_' + str(M) + '_Subsets.png', format='png', dpi=200)
+    pp.colorbar(SSAEM_image)
+    pp.show(SSAEM_image)
 
