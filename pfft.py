@@ -11,16 +11,86 @@ import math
 import warnings
 import matplotlib.pyplot as pp
 
-def fft(img):
+
+def getBlockData2ComplementaryLines(linedata1,linedata2,beta_factor,sizeN_plus1):
+    tiledLineData = np.ones((sizeN_plus1,1))*linedata1
+    tiledLineDataConj = np.ones((sizeN_plus1,1))*linedata2
+                               
+    FrFTVarBlock1 = beta_factor * tiledLineData
+    FrFTVarBlock2 = np.conjugate(beta_factor)*tiledLineDataConj
+                                
+    BlockDataFrom2Lines = FrFTVarBlock1 + FrFTVarBlock2
+    return BlockDataFrom2Lines
     
-    A = np.ones((11,11))
-    A = pr.image_read('sl69.mat', dtype=np.float32)
+
+def VectorizedFrFT_Centered(x,alpha):
+    sizeX, DONTUSE = x.shape 
+    N = sizeX - 1
+    n1 = range(0,N+1)
+    n2 = range(-N-1,0)
+    n1 = np.array(n1)
+    n2 = np.array(n2)
+    n = np.concatenate((n1,n2),axis=0)
+    n = n*np.array(np.ones((1,n.size)))
+    n = np.transpose(n)
+    M = np.array((range(0,N+1)))
+    M = np.transpose(M*np.array(np.ones((1,M.size))))
+    K = np.array((range(0,N+1)))
+    K = np.transpose(K**np.array(np.ones((1,K.size))))
+    Z = np.zeros((x.shape))
+    M = M - N/2.0
+    E_n = np.exp(-1j*np.pi*alpha*n**2/(N+1))
+    
+    PremultiplicationFactor = np.exp(1j*np.pi*M*N*alpha/(N+1))
+    PostmultiplicationFactor = np.exp(1j*np.pi*alpha*N*K/(N+1))
+    
+    x_tilde = np.multiply(x, PremultiplicationFactor)
+    x_tilde = np.concatenate((x_tilde,Z),axis=0)
+    x_tilde = x_tilde*E_n
+    
+    FirstFFT = np.fft.fft(x_tilde, axis = 0) 
+    SecondFFT = np.fft.fft(np.conj(E_n), axis = 0) 
+    
+    interimY= FirstFFT*SecondFFT
+    interimY = np.transpose(interimY)
+    interimY = np.fft.ifft(interimY)
+    interimY= np.multiply(np.transpose(interimY), E_n)
+    
+    y = PostmultiplicationFactor * interimY[0:N+1,:]
+    return y 
+
+
+def  FRFT_Centered(x,alpha):
+    x = x.flatten()
+    N = x.size
+    n = np.concatenate([np.linspace(0,N-1,N), np.linspace(-N,-1,N)])
+
+    Factor1 = np.exp(-1j*np.pi*alpha*n**2)                                   # Equivalent to E(n)
+    Factor2 = np.exp(1j*np.pi*np.linspace(-(N-1)/2, (N-1)/2, N)*(N-1)*alpha) # Equivalent to C(k')
+    Factor3 = np.exp(1j*np.pi*np.linspace(0,N-1,N)*(N-1)*alpha)                    # Equivalent to B(k')
+
+    x_tilde = x*Factor2                                                      #pre multiplication factor
+    x_tilde = np.concatenate([x_tilde, np.zeros((N,))])
+    x_tilde = x_tilde*Factor1
+
+    
+    XX = np.fft.fft(x_tilde, axis = 0)
+    YY = np.fft.fft(np.conj(Factor1), axis = 0)
+    
+    y = np.fft.ifft(XX*YY, axis = 0)
+    y = y*Factor1
+    
+    y = y[0:N]
+
+    return y*Factor3
+
+def pfft(A):
     
     #padding to nearest 2*(N+1)+1 <--- to make odd
     r1,c1 = A.shape
     global PAD, r
-    PAD = (r1+3)/2
-    print(PAD)
+    PAD = int(np.ceil((r1*1.2 - r1)/2))
+    #print(PAD)
     A = np.pad(A, PAD, 'minimum')
     r,c = A.shape
     
@@ -31,7 +101,7 @@ def fft(img):
     CTR = (N+1)/2
     ACTR = M/2
     dtheta = np.pi/M 
-    
+    #print 'M=',M
     
     
     if np.mod(M,4) == 0:
@@ -39,8 +109,8 @@ def fft(img):
     elif np.mod(M,2) == 0:
         L = (M-2)/4
      
-    print(L)
-    print('^^Required levels^^')   
+    #print(L)
+    #print('^^Required levels^^')   
     #initialization of FFT and FrFT matrices
     F = np.zeros((r,M))+0j
     fx = np.zeros((r,c))+0j
@@ -54,28 +124,15 @@ def fft(img):
     for l in range(1,L+1):
         # scaling by alpha_l
         alpha = np.cos(l*dtheta)
-        
-        #loop for II.5, II.6
-        for i in range(0,r) :
-            for j in range (0,c) :
-                fx[i,j]= 0
-                #n summation loop
-                for n in range(0,r):
-                    #II.5 FrFT along rows
-                    fx[i,j] = fx[i,j] + A[i,n]*np.exp(-1j*2*np.pi*C[j]*alpha*SN[n]/(N+1))
-       
-        #conditional loop to accomodate doubly even angles
-        if (m%4==0) & (l == L):
-            pass #on the last level, skip extra calcs (only for doubly even M)
-        else:
-            for j in range (0,c) :  
-                for i in range(0,r) :
-                    fy[i,j] = 0
-                    #n summation loop
-                    for n in range(0,c):
-                        #II.6 FrFT along columns
-                        fy[i,j] = fy[i,j] + A[n,j]*np.exp(-1j*2*np.pi*R[i]*alpha*SN[n]/(N+1))
-       
+  
+        for i in range(0,r):
+            fx[i,:] = FRFT_Centered(A[i,:],alpha/(N+1))   
+           
+            if (np.mod(M,4)==0) and (l == L):
+                pass 
+            else:
+                fy[:,i] = FRFT_Centered(A[:,-1-i],alpha/(N+1))
+                
         #Scaling by Beta_l
         beta = np.sin(l*dtheta)
         
@@ -120,21 +177,103 @@ def fft(img):
             F[:,l] = np.fliplr(Fx1)
             F[:,m-l] = Fx2
             
-            if (m%4==0) & (l == L):
+            if (np.mod(M,4)==0) & (l == L):
                 pass
             else:
-                F[:,ACTR+l]= np.fliplr(Fy1)
-                F[:,ACTR-l]= np.fliplr(Fy2)
+                F[:,ACTR+l]= (Fy1)
+                F[:,ACTR-l]= (Fy2)
             # Storing 0 and 90 degree radial lines
             if l ==1 :
                F[:,0] = np.fliplr(Fzero)
                F[:,ACTR] = np.fliplr(Fninety)
-        print(l)
+        #print(l)
     return F
           
-def adjoint(img):
-    A = np.ones(11)
-    return A
+def apfft(Polar_Grid):
+#    counts = pr.image_read( 'TomoData/noisyphantom/nslcounts.mat', dtype=np.float32 ) 
+#    Polar_Grid = counts
+#    Polar_Grid = np.ones((50,50))
+
+    M, sizeN_plus1 = Polar_Grid.shape
+    N = sizeN_plus1 - 1
+    
+    
+    if np.mod(N,2) != 0:
+        zeroPad = np.zeros((M,1))
+        Polar_Grid = np.concatenate((Polar_Grid,zeroPad),1)
+        M, sizeN_plus1 = Polar_Grid.shape
+        N = sizeN_plus1 - 1
+    
+
+    L = (M-2)/4.0 # Number of levels 
+
+    if np.mod(M-2,4)!=0 :
+        L = np.ceil(L);                  
+     
+    lineSpacing = range(-N/2,N/2 + 1)
+    lineSpacing = np.array(lineSpacing)
+    lineSpacing = lineSpacing*np.array(np.ones((1,lineSpacing.size)))
+    
+    gridSpacing = np.multiply(np.transpose(lineSpacing),lineSpacing)
+    
+    ImageAdjoint = np.zeros((sizeN_plus1, sizeN_plus1)) # Suppose to be Complex Adjoint image
+                           
+    for l in range(1,int(L)+1): 
+        #print l
+        angle = l*180/M;
+        alpha_l = math.cos(angle*math.pi/180)
+        beta_l  = math.sin(angle*math.pi/180)
+
+        beta_factor = np.exp((2*1j*np.pi*beta_l * gridSpacing)/ sizeN_plus1) # observe the scale change, it is +ve
+        
+        #Reversing the forward Polar Grid operation step by step
+        #X-axis FrFT Grid
+        #computing variable scale FrFT  first, gather the  lines oriented at angle from x-axis
+        line1 = Polar_Grid[l, :]
+        line2 = np.flip(Polar_Grid[M-l, :],0)
+        
+        FrFTVarBlock = getBlockData2ComplementaryLines(line1,line2,beta_factor,sizeN_plus1) 
+        
+        #computing uniform scale FrFT second
+        FrFTVarBlock = np.transpose(FrFTVarBlock)        
+        FrFTUniformBlock_x = VectorizedFrFT_Centered(FrFTVarBlock, -alpha_l)       
+    
+        ImageAdjoint = ImageAdjoint + FrFTUniformBlock_x
+        ### COME BACK TO THIS . . . 
+        
+        if angle == 45: 
+            continue # also works on python apparently 
+        
+        #Y-axis FrFT Grid
+        line1 = Polar_Grid[M/2-l,:]
+        line2 = Polar_Grid[M/2+l, :]
+        FrFTVarBlock = getBlockData2ComplementaryLines( line1, line2,beta_factor,sizeN_plus1) 
+        
+        FrFTVarBlock = np.transpose(FrFTVarBlock)
+        
+        #computing uniform scale FrFT second
+        FrFTUniformBlock_y = VectorizedFrFT_Centered(FrFTVarBlock, -alpha_l) 
+        
+        ImageAdjoint = ImageAdjoint + np.transpose(FrFTUniformBlock_y)
+        
+        #computing for zero and ninety degrees seperately
+        if l == 1: 
+            ZeroLine = Polar_Grid[0,:]
+            NinetyLine = Polar_Grid[M/2,:]
+            
+            FrFTVarBlock1 =  np.ones((sizeN_plus1,1))*NinetyLine
+            FrFTVarBlock2 =  np.ones((sizeN_plus1,1))*ZeroLine
+            
+            #computing uniform scale FrFT second
+            FrFTUniformBlock_x = VectorizedFrFT_Centered(np.transpose(FrFTVarBlock2) , -1)          
+            FrFTUniformBlock_y = VectorizedFrFT_Centered(np.transpose(FrFTVarBlock1) , -1)
+            ImageAdjoint = ImageAdjoint + FrFTUniformBlock_x + np.transpose(FrFTUniformBlock_y)  
+    return (np.transpose(np.flipud(ImageAdjoint)))
+
+
+
+
+
 
 if __name__ == "__main__":
     Kino = fft(1)

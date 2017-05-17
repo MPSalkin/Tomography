@@ -3,6 +3,7 @@ import pyraft as pr
 import matplotlib.pyplot as pp
 import fourier_slice as fs
 import pseudopolar_fourier_slice as ppfs
+import ppolar_fourier_slice as pfs
 import numpy as np
 import math
 import time 
@@ -10,6 +11,10 @@ import savedata as sd
 from skimage import data, img_as_float
 from skimage.measure import compare_ssim as ssim
 import P_INTERP_PP as PIPP
+
+Method = 2 #0 = NFFT, 1 = PPFFT, 2 = PFFT
+Data = 1  #0 = CLEAN PHANTOM, 1 = NOISY PHANTOM, 2=APPLESEED
+itr = 10
 
 # Function used to import sinogram data and radon function for data
 def nonuimportSino(data_case):
@@ -45,6 +50,7 @@ def pseudoimportSino(data_case):
         dark = pr.image_read( 'TomoData/PhantomData/sldark.mat', dtype=np.float32  )
         counts = pr.image_read( 'TomoData/PhantomData/slcount.mat', dtype=np.float32 ) 
     elif data_case == 1:
+        sl = pr.image_read( 'TomoData/PhantomData/sl2.mat', dtype=np.float32) 
         flat = pr.image_read( 'TomoData/noisyphantom/nslflat.mat', dtype=np.float32  ) 
         dark = pr.image_read( 'TomoData/noisyphantom/nsldark.mat', dtype=np.float32  ) 
         counts = pr.image_read( 'TomoData/noisyphantom/nslcounts.mat', dtype=np.float32 ) 
@@ -75,7 +81,33 @@ def pseudoimportSino(data_case):
     
     return sl, sino, counts, dark, flat, fast_radon, fast_transp     
 
+def polarimportSino(data_case):
+    if data_case ==0:
+        sl = pr.image_read( 'TomoData/PhantomData/sl69.mat',dtype=np.float32 ) 
+        counts = pr.image_read( 'TomoData/PhantomData/counts69.mat', dtype=np.float32 ) 
+        flat = pr.image_read( 'TomoData/PhantomData/flat69.mat', dtype=np.float32  ) 
+        dark = pr.image_read( 'TomoData/PhantomData/dark69.mat', dtype=np.float32  )
+    elif data_case ==1:
+        sl = pr.image_read( 'TomoData/PhantomData/sl513.mat',dtype=np.float32 ) 
+        flat = pr.image_read( 'TomoData/PhantomData/sl513flat.mat', dtype=np.float32  ) 
+        dark = pr.image_read( 'TomoData/PhantomData/sl513dark.mat', dtype=np.float32  )
+        counts = pr.image_read( 'TomoData/PhantomData/sl513counts.mat', dtype=np.float32 ) 
+    elif data_case ==2:
+        sl = pr.image(np.ones((2048,2048)), top_left =(-1,1), bottom_right = (1,-1)) 
+        flat = pr.image_read( 'TomoData/SeedData/flati.mat', dtype=np.float32  ) 
+        dark = pr.image_read( 'TomoData/SeedData/darki.mat', dtype=np.float32  ) 
+        counts = pr.image_read( 'TomoData/SeedData/countsi.mat', dtype=np.float32 ) 
+    else:
+        print('not a valid data_case, you can insert custom data here')
+        quit()
+ 
 
+    sino = pr.image(np.log(flat/counts), top_left = (0,1),bottom_right=(np.pi,-1))
+    fast_radon, fast_transp = pfs.make_fourier_slice_radon_transp( sino )
+    
+    return sl, sino, counts, dark, flat, fast_radon, fast_transp
+     
+    
 # Gradient function (y = counts; b = flat; r = dark)
 def grad(l,counts,dark,flat):
     const = flat * np.exp(-l)
@@ -104,16 +136,12 @@ def ImportData(method_import,data_case):
         return A, b, counts, dark,flat, fast_radon, fast_transp, N[data_case]
     elif method_import == 2:
         A, b, counts, dark, flat, fast_radon, fast_transp = polarimportSino(data_case)
-        N = [1.1*10**(-4),1.1*10**(-4),1.1*10**(-4)] #stored gamma values 
+        N = [1.1*10**(-6),6.0*10**(-5),1.1*10**(-4)] #stored gamma values 
         return A, b, counts, dark,flat, fast_radon, fast_transp, N[data_case]
     else:
         print('choose a valid import case')
         quit()
        
-
-Method = 0 #0 = NFFT, 1 = PPFFT, 2 = PFFT
-Data = 2  #0 = CLEAN PHANTOM, 1 = NOISY PHANTOM, 2=APPLESEED
-itr = 5
 
 # Data Import Functions
 A, b, counts, dark, flat, fast_radon, fast_transp, gamma = ImportData(Method,Data)
@@ -211,7 +239,7 @@ pp.figure(4)
 image = pr.image((x) , top_left =  (-1,1), bottom_right = (1, -1) ) 
 FISTA_image = pp.imshow( image,cmap = 'gray', interpolation = 'nearest', 
 		extent = ( image.top_left[ 0 ], image.bottom_right[ 0 ], image.bottom_right[ 1 ], image.top_left[ 1 ] ))
-pp.title('FISTA (ML) - 10 Iterations')
+pp.title('FISTA (ML) - ' + str(itr) + ' Iterations')
 pp.savefig('Visuals/Images/FISTA_noisy_reconstruct_' + str(itr) + '_ITR' '.png', format='png', dpi=200)
 pp.colorbar(FISTA_image)
 pp.show(FISTA_image)
