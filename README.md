@@ -11,7 +11,9 @@ Note that results and images should be pulled out of the directory and placed in
 
 If you wish to clear the results directories you can run "DeleteVisuals.py" and follow the prompts to clear excess visuals.
 
-OSTR.py was an early implementation of the OSTR algorithm which was replaced by SSAEM int he final report, however the code does function and can be made useable, however in the interest of time, we, the authors have not made it as easily run as FISTA and SSAEM. Please email the authors for more imformation regarding this and any questions.
+NOTE 1: OSTR.py was an early implementation of the OSTR algorithm which was replaced by SSAEM int he final report, however the code does function and can be made useable, however in the interest of time, we, the authors have not made it as easily run as FISTA and SSAEM. Please email the authors for more imformation regarding this and any questions.
+
+NOTE 2: All data used in the reports can be found in /TomoData and new data can easily be added into one of the subfolders directly and easily reconstructed by changing the strings in the importfunctions for a desired data case (note that paramters will not be adjusted automatically, and thus the user must experiment with the values).
 
 -Regards,
 Jacob Cupul, Luis Ramirez, Matthew Salkin
