@@ -15,5 +15,11 @@ NOTE 1: OSTR.py was an early implementation of the OSTR algorithm which was repl
 
 NOTE 2: All data used in the reports can be found in /TomoData and new data can easily be added into one of the subfolders directly and easily reconstructed by changing the strings in the importfunctions for a desired data case (note that paramters will not be adjusted automatically, and thus the user must experiment with the values).
 
+NOTE 3: Depedencies include:
+  -pyNFFT (which requires other C++ libraries)
+  -skimage (scikit-image, for SSIM computation)
+  -matplotlib (for all plots)
+  -numpy 
+
 -Regards,
 Jacob Cupul, Luis Ramirez, Matthew Salkin
