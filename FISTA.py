@@ -12,11 +12,24 @@ from skimage import data, img_as_float
 from skimage.measure import compare_ssim as ssim
 import P_INTERP_PP as PIPP
 
+#******************************************************************************    
+#This is where you specify the method you're using and the data set. Custom
+#data sets can be used by specifying new import locations in  the ""importSino()
+#function for each respective method. Parameters are set in the N vector in the
+#ImportData() function. N is length 3 (one for each data case) and you should
+#be careful to adjust the corresponding gamma paramter to your method and data
+#case.
+
+#Warning! PFFT computation time for data cases 1 and 2 are very time intensive!
+
 Method = 2 #0 = NFFT, 1 = PPFFT, 2 = PFFT
 Data = 1  #0 = CLEAN PHANTOM, 1 = NOISY PHANTOM, 2=APPLESEED
 itr = 10
 
+#******************************************************************************  
+
 # Function used to import sinogram data and radon function for data
+
 def nonuimportSino(data_case):
     if data_case ==0:
         sl = pr.image_read( 'TomoData/PhantomData/sl.mat') 
@@ -44,6 +57,10 @@ def nonuimportSino(data_case):
     return sl, sino, counts, dark, flat, fast_radon, fast_transp
      
 def pseudoimportSino(data_case):
+    #You can custom import data by loading into directory and changing string
+    #Sinogram must by NxN wher N is doubly even. It may be useful to develop 
+    #interpolation function in feature domain to create artificial oversampling
+    #this way any data can be made NxN with N divisible by 4.
     if data_case ==0:
         sl = pr.image_read( 'TomoData/PhantomData/sl2.mat', dtype=np.float32) 
         flat = pr.image_read( 'TomoData/PhantomData/slflat.mat', dtype=np.float32  ) 
@@ -62,19 +79,26 @@ def pseudoimportSino(data_case):
     else:
         print('not a valid data_case, you can insert custom data here')
         quit()
+    #the lines below must always be performed regardless of data
     n,k = sl.shape
+    #Form sino for interpolation step	
     sino = np.log(flat/counts)
+    #Pad Sino to eliminate need for extrapolation, oversample	
     sino = PIPP.Pad2x(sino)
     print(np.max(sino))
+    #Convert to frequency domain
     fsino = np.fft.fftshift(sino, axes = 0)
     fsino = np.fft.fft( fsino, axis = 0 )
     fsino = np.fft.fftshift(fsino)
+    #Interpolate via 2 stage interpolation (reverse of averbuch et. al)
     fsino = PIPP.P_INTERP_PP(fsino)
+    #Convert back to feature domain
     fsino = np.fft.fftshift(fsino )
     fsino = np.fft.ifft( fsino, axis = 0 )
     sino= (np.real(np.fft.ifftshift(fsino, axes=0)))
     sino= pr.image(np.concatenate((np.fliplr(np.flipud(sino[:,0:n])),np.fliplr(sino[:,n::])),1), top_left = (0,1), bottom_right = (np.pi,-1) )
     print(np.min(counts))
+    #Reparse into counts,flat,dark
     counts = pr.image(flat/np.exp(sino), top_left = (0,1), bottom_right = (np.pi,-1) )
     
     fast_radon, fast_transp = ppfs.make_fourier_slice_radon_transp( sino )
@@ -126,6 +150,7 @@ def hreg(l,counts,dark,flat):
 # Function to select type of data to import
 
 def ImportData(method_import,data_case):
+#This selects import data and gives a gamma paramter based on inputs	
     if method_import == 0:
         A, b, counts, dark, flat, fast_radon, fast_transp = nonuimportSino(data_case)
         N = [1.1*10**(-4),8.5*10**(-5),5.0*10**(-5)] #stored gamma values 
