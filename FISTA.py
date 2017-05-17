@@ -1,9 +1,11 @@
 #FISTA - Fast Iterative Shrinkage-Thresholding Algorithm
 import pyraft as pr
 import matplotlib.pyplot as pp
+# The discrete Radon transform methods are imported here
 import fourier_slice as fs
 import pseudopolar_fourier_slice as ppfs
 import ppolar_fourier_slice as pfs
+# Other methods must be imported from their respective files/libraries
 import numpy as np
 import math
 import time 
