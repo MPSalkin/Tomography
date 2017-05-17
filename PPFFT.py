@@ -2,43 +2,18 @@ import numpy as np
 import My_FRFT_CenteredMod as frft
 
 def PPFFT(X):
-#
 #%=====================================================================
 #% This function performs a Recto (Pseudo) Polar transform on a 2D signal X given on a 
-#% Cartesian grid. If X is N*N, the output will have 2NS1 by 2NS2 output
-#% values. If the input is not square, it is squared before the transform.
-#% Also, the size is increased so as to get even number of rows and columns.
+#% Cartesian grid. If X is N*N, the output will have 2N by 2N output
+#% values. 
 #%   
-#% Synopsis: Y=PPFFT(X,S1,S2)
+#% Synopsis: Y=PPFFT(X)
 #%
 #% Inputs -    X      N*N matrix in cartesian grid, (n is assumed to be even)   
-#%                  S1   oversampling factor along the rays
-#%                  S2   oversampling factor along the slopes (e.g. angles)
-#% Outputs - Y      (2*S1*N)*(2*S2*N) matrix (theta,r)
+#% Outputs - Y      (2*N)*(2*N) matrix (theta,r)
 #%
-#% Example: 
-#%       This shows that the obtained transform matches the brute-force one
-#%       N=16; X=randn(N,N); X(N/4:3*N/4,N/4:3*N/4)=1;
-#%       [XC,YC]=Create_Oversampled_Grid('D',[N,pi,5,3],'.r');
-#%       tic; Y_slow=Brute_Force_Transform(X,XC,YC); toc;
-#%       tic; Y_fast=PPFFT(X,5,3); toc;
-#%       figure(1); clf;
-#%       subplot(2,2,1); imagesc(real(Y_fast)); xlabel('Fast - real part');
-#%       subplot(2,2,2); imagesc(imag(Y_fast)); xlabel('Fast - imaginary part');
-#%       subplot(2,2,3); imagesc(real(Y_slow)); xlabel('Slow - real part');
-#%       subplot(2,2,4); imagesc(imag(Y_slow)); xlabel('Slow - imaginary part');
-#%       disp(['Error between fast and slow: ',num2str(max(abs(Y_fast(:)-Y_slow(:))))]);
+#% The following is an adaptation by the code written by Michael Elad.
 #%
-#%       This shows the relation between the PPFFT and the matrix transform 
-#%       N=16; X=randn(N,N)+sqrt(-1)*randn(N,N);
-#%       Yf=PPFFT(X,1,1); 
-#%       [xc,yc]=Create_Oversampled_Grid('D',[N,pi,1,1],'');
-#%       T=Transform_Matrix(N,N,xc,yc);
-#%       Yc=T*X(:);
-#%       plot([real(Yf)-real(reshape(Yc,[32,32]))']); % there is a transpose relation
-#%       plot([imag(Yf)-imag(reshape(Yc,[32,32]))']); % there is a transpose relation
-#% 
-#% Written on March 20th, 2005 by Michael Elad.
 #%=====================================================================
     
 
@@ -47,7 +22,7 @@ def PPFFT(X):
         
     #
     #%------------------------------------------------------------------------------------------------------------------------------
-    #% Stage 1: Checking input size and defining the sizes of the input/output arrays
+    #% Stage 1: Defining the sizes of the input/output arrays
     #%------------------------------------------------------------------------------------------------------------------------------
     
     S = np.shape(X)
@@ -80,9 +55,8 @@ def PPFFT(X):
     
     
 def PPFFTBH(X):
-#
 #%=====================================================================
-#
+# This function is the BH component of  PPFFT
 #%=====================================================================
     
 
@@ -114,7 +88,7 @@ def PPFFTBH(X):
 def PPFFTBV(X):
 #
 #%=====================================================================
-#
+#This function is the BV component of  PPFFT
 #%=====================================================================
     S1=1 
     S2=1  
@@ -152,19 +126,10 @@ def APPFFT(X):
 #    % Synopsis: Y=APPFFT(X)
 #    %
 #    % Inputs -    X     2N*2N matrix in pseudo-polar grid, (N is assumed to be even)           
-#    % Outputs - Y      N*N matrix (Cartesian grid)
+#    % Outputs - Y      N*N matrix (Cartesian grid)    
+#    % 
+#    %The following is an adaptation by the code written by Michael Elad.
 #    %
-#    % Example: 
-#    % 
-#    %   The following is a way to verify that this works as an adjoint -
-#    %   choosing random X and Y, one must obtain that <y,Ax> = <x,adj(A)y>'
-#    %  
-#    %   N=16; X=randn(N)+sqrt(-1)*randn(N); Y=randn(2*N)+sqrt(-1)*randn(2*N);
-#    %   AX=PPFFT(X);
-#    %   AtY=APPFFT(Y);
-#    %   disp(abs( sum(sum(Y'.*AX)) -conj(sum(sum(X'.*AtY)))));       
-#    % 
-#    % Written on March 20th, 2005 by Michael Elad.
 #    %====================================================================
     
     # preliminary checks of the input size
@@ -182,35 +147,35 @@ def APPFFT(X):
     N=N/2;
       
     Y=np.zeros((N,N))*0j
-    
+    #FrFT for the BV rays
     Temp1=np.zeros((N,2*N))*0j
     for l in range(-N,N):
         Xvec= X[N-1::-1,l+N]
         alpha=-l/N**2.0
         OneLine=frft.My_FRFT_CenteredMod(Xvec,alpha)
         Temp1[:,l+N]=np.transpose(OneLine);
-    
+    #ifft along complementary axis for BV rays and store output
     Temp_Array=2*N*np.fft.ifft(Temp1,axis=1)
     Temp_Array= np.dot(Temp_Array[:,0:N],np.diag((-1.0)**np.arange(0,N)))
     Y=np.transpose(Temp_Array)
-    
+    #FrFT for the BH rays
     Temp2=np.zeros((N,2*N))*0j;
     for l in range(-N,N):
         Xvec=X[2*N-1:N-1:-1,l+N]
         alpha=-l/N**2.0
         OneCol=frft.My_FRFT_CenteredMod(Xvec,alpha)
         Temp2[:,l+N]=OneCol
-
+    #ifft along complementary axis for BH rays and store output
     Temp_Array= 2*N*np.fft.ifft(Temp2,axis=1)
     Temp_Array= np.dot(Temp_Array[:,0:N],np.diag((-1.0)**np.arange(0,N)))
     Z=Temp_Array
-    
+    #Re-orient and sum output.
     return (np.flipud(Z)+Y)
     
 def APPFFTBH(X):
 #
 #    %====================================================================
-#
+#       This is the adjoint operator for only the BH rays
 #    %====================================================================
     
     # preliminary checks of the input size
@@ -225,12 +190,13 @@ def APPFFTBH(X):
     Y=np.zeros((N,N))*0j
     
     Temp1=np.zeros((N,2*N))*0j
+    #Start with FrFT along axis
     for l in range(-N,N):
         Xvec= X[N-1::-1,l+N]
         alpha=-l/N**2.0
         OneLine=frft.My_FRFT_CenteredMod(Xvec,alpha)
         Temp1[:,l+N]=np.transpose(OneLine);
-    
+    #Finish with ifft along complementary axis
     Temp_Array=2*N*np.fft.ifft(Temp1,axis=1)
     Temp_Array= np.dot(Temp_Array[:,0:N],np.diag((-1.0)**np.arange(0,N)))
     Y=np.transpose(Temp_Array)
@@ -240,9 +206,9 @@ def APPFFTBH(X):
 def APPFFTBV(X):
 #
 #    %====================================================================
-#
+#       This is the adjoint operator for only the BV rays
 #    %====================================================================
-    
+
     # preliminary checks of the input size
     S = np.shape(X); 
     N = S[0]
@@ -256,12 +222,13 @@ def APPFFTBV(X):
     Z=np.zeros((N,N))*0j
     
     Temp2=np.zeros((N,2*N))*0j;
+    #Start with FrFT along axis
     for l in range(-N,N):
         Xvec=X[N-1::-1,l+N]
         alpha=-l/N**2.0
         OneCol=frft.My_FRFT_CenteredMod(Xvec,alpha)
         Temp2[:,l+N]=OneCol
-
+    #Finish with ifft along complementary axis
     Temp_Array= 2*N*np.fft.ifft(Temp2,axis=1)
     Temp_Array= np.dot(Temp_Array[:,0:N],np.diag((-1.0)**np.arange(0,N)))
     Z=Temp_Array

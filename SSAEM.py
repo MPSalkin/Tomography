@@ -10,8 +10,8 @@ from skimage.measure import compare_ssim as ssim
 import pseudopolar_fourier_slice as ppfs
 import P_INTERP_PP as PIPP
 
-# Function used to import data and radon function for data
-def nonuimportSino():
+# Function used to import data and radon function for data for nfft
+def nonuimportSino(data_case):
     if data_case ==0:
         sl = pr.image_read( 'TomoData/PhantomData/sl.mat') 
         flat = pr.image_read( 'TomoData/PhantomData/slflat.mat', dtype=np.float32  ) 
@@ -37,14 +37,19 @@ def nonuimportSino():
     
     return sl, sino, counts, dark, flat, fast_radon, fast_transp, function      
 
-    
+# Function used to import data and radon function for data for nfft   
 def pseudoimportSino(data_case):
+    #You can custom import data by loading into directory and changing string
+    #Sinogram must by NxN wher N is doubly even. It may be useful to develop 
+    #interpolation function in feature domain to create artificial oversampling
+    #this way any data can be made NxN with N divisible by 4.
     if data_case ==0:
         sl = pr.image_read( 'TomoData/PhantomData/sl2.mat', dtype=np.float32) 
         flat = pr.image_read( 'TomoData/PhantomData/slflat.mat', dtype=np.float32  ) 
         dark = pr.image_read( 'TomoData/PhantomData/sldark.mat', dtype=np.float32  )
         counts = pr.image_read( 'TomoData/PhantomData/slcount.mat', dtype=np.float32 ) 
     elif data_case == 1:
+        sl = pr.image_read( 'TomoData/PhantomData/sl2.mat', dtype=np.float32) 
         flat = pr.image_read( 'TomoData/noisyphantom/nslflat.mat', dtype=np.float32  ) 
         dark = pr.image_read( 'TomoData/noisyphantom/nsldark.mat', dtype=np.float32  ) 
         counts = pr.image_read( 'TomoData/noisyphantom/nslcounts.mat', dtype=np.float32 ) 
@@ -56,23 +61,30 @@ def pseudoimportSino(data_case):
     else:
         print('not a valid data_case, you can insert custom data here')
         quit()
+    #the lines below must always be performed regardless of data
     n,k = sl.shape
+    #Form sino for interpolation step
     sino = np.log(flat/counts)
+    #Pad Sino to eliminate need for extrapolation, oversample
     sino = PIPP.Pad2x(sino)
     print(np.max(sino))
+    #Convert to frequency domain
     fsino = np.fft.fftshift(sino, axes = 0)
     fsino = np.fft.fft( fsino, axis = 0 )
     fsino = np.fft.fftshift(fsino)
+    #Interpolate via 2 stage interpolation (reverse of averbuch et. al)
     fsino = PIPP.P_INTERP_PP(fsino)
+    #Convert back to feature domain
     fsino = np.fft.fftshift(fsino )
     fsino = np.fft.ifft( fsino, axis = 0 )
     sino= (np.real(np.fft.ifftshift(fsino, axes=0)))
     sino= pr.image(np.concatenate((np.fliplr(np.flipud(sino[:,0:n])),np.fliplr(sino[:,n::])),1), top_left = (0,1), bottom_right = (np.pi,-1) )
     print(np.min(counts))
+    #Reparse into counts,flat,dark
     counts = pr.image(flat/np.exp(sino), top_left = (0,1), bottom_right = (np.pi,-1) )
     function = ppfs.make_fourier_slice_radon_transp
     fast_radon, fast_transp = function( sino )
-    
+
     return sl, sino, counts, dark, flat, fast_radon, fast_transp, function     
 
     
@@ -98,9 +110,10 @@ def split(a, n):
     return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in xrange(n))
 
 def ImportData(method_import,data_case):
+    #This selects import data and gives a lambda paramter based on inputs
     if method_import == 0:
         A, b, counts, dark, flat, fast_radon, fast_transp, function = nonuimportSino(data_case)
-        N = [5.0*10**(1),3.5*10**(1),2.15*10**(1)] #stored lambda values # 4 subsets
+        N = [4.05205*10**(-1),4.25*10**(-1),5.0*10**(-1)] #stored lambda values # 4 subsets
         #N = [5.0*10**(1),3.5*10**(1),2.15*10**(1)] #stored lambda values # X subsets
         return A, counts, dark,flat, fast_radon, fast_transp, function, N[data_case]
     elif method_import == 1:
@@ -116,11 +129,21 @@ def ImportData(method_import,data_case):
         quit()
 
 if __name__ == "__main__":
+#******************************************************************************    
+#This is where you specify the method you're using and the data set. Custom
+#data sets can be used by specifying new import locations in  the ""importSino()
+#function for each respective method. Parameters are set in the N vector in the
+#ImportData() function. N is length 3 (one for each data case) and you should
+#be careful to adjust the corresponding lambda paramter to your method and data
+#case.
+
+#Warning! currently PPFFT allows for only 2 subsets and PFFT is not supported.
+
     Method = 1 #0 = NFFT, 1 = PPFFT, 2 = PFFT
     Data = 2  #0 = CLEAN PHANTOM, 1 = NOISY PHANTOM, 2=APPLESEED 
     M = 2 # Number of subsets
-    N = 10 # Number of iterations
-    
+    N = 2 # Number of iterations
+#******************************************************************************   
     # Import Ordered Subset data
     IMAGE, tmp_counts, tmp_dark, tmp_flat, ffast_radon, ffast_transp, FUN, lam = ImportData(Method,Data)
     # Get dimensions of sinogram
@@ -128,6 +151,7 @@ if __name__ == "__main__":
     row2,col2 = IMAGE.shape
     # initialize splits and image
     x = np.ones((row2,row2))*0.9
+    #x = np.ones((row2,ro2))*0.1 #adjusting starting guess matters!!!
     #x = np.ones((row2,row2))*(np.sum(tmp_counts) / np.sum( ffast_radon( np.ones((row2,row2)) ) ) )
 
     # Create M subsets of sinogram
