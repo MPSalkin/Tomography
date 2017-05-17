@@ -1,13 +1,15 @@
 #SSAEM - Ordered Subsets Transmission
 import pyraft as pr
 import matplotlib.pyplot as pp
+# The discrete randon transform method is imported first here
 import fourier_slice as fs
+import pseudopolar_fourier_slice as ppfs
+# other methods must import from their respective files/libraries
 import numpy as np
 import math
 import time
 import savedata as sd
 from skimage.measure import compare_ssim as ssim
-import pseudopolar_fourier_slice as ppfs
 import P_INTERP_PP as PIPP
 
 # Function used to import data and radon function for data for nfft
