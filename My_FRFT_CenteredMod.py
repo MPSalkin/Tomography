@@ -15,8 +15,8 @@ def My_FRFT_CenteredMod(x,alpha):
     # 
     # Outputs-  y - the transformed result as an N-entries vector
     #
-    # Written by Michael Elad on March 20th 2005.
-    # Adapted by  Jacob Cupul on April 1st 2017.
+    #The following is an adaptation of the code written by Michael Elad.
+    #
     #=====================================================================
     N = np.size(x)
     Factor2= np.exp(1j * np.pi *np.transpose(np.arange(N)) * N *1.0 * alpha)
@@ -34,5 +34,7 @@ def My_FRFT_CenteredMod(x,alpha):
     YY=np.fft.fft(np.conj(Factor))
     y=np.fft.ifft(XX*YY)
     y=y*Factor
+    #Herein lies an additional multiplication factor to recenter output.
+    #It is required!!!
     y=y[0:N]*Factor2+0j
     return y

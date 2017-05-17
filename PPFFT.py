@@ -12,8 +12,8 @@ def PPFFT(X):
 #% Inputs -    X      N*N matrix in cartesian grid, (n is assumed to be even)   
 #% Outputs - Y      (2*N)*(2*N) matrix (theta,r)
 #%
-#% The following is an adaptation by the code written by Michael Elad.
-#%
+#% The following is an adaptation of the code written by Michael Elad.
+#% Jacob Cupul, 5/15/2017.
 #%=====================================================================
     
 
